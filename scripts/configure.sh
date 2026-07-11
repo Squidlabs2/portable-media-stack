@@ -133,7 +133,7 @@ apply_mode_defaults() {
 
   case "$mode" in
     tailscale-funnel)
-      set_kv INSTALL_TRAEFIK false
+      set_kv INSTALL_TRAEFIK true
       set_kv ENABLE_PUBLIC_HOSTNAMES false
       set_kv AUTO_CONFIGURE_FUNNEL true
       set_kv FUNNEL_USE_PATHS true
@@ -146,6 +146,7 @@ apply_mode_defaults() {
       set_kv FUNNEL_RADARR_PATH /radarr
       set_kv FUNNEL_SONARR_PATH /sonarr
       set_kv FUNNEL_JELLYFIN_PATH /jellyfin
+      set_kv TRAEFIK_FUNNEL_PORT 8088
       ;;
     traefik-private-dns|traefik-public-dns)
       set_kv INSTALL_TRAEFIK true
@@ -165,7 +166,7 @@ apply_mode_defaults
 if [ "$NON_INTERACTIVE" = false ]; then
   case "$(get_value MODE)" in
     tailscale-funnel)
-      echo "Recommended Funnel defaults loaded: bundled Traefik off, one hostname on 443, Radarr at /radarr, Sonarr at /sonarr, Jellyfin off."
+      echo "Recommended Funnel defaults loaded: bundled Traefik in front of Funnel on local port 8088, one hostname on 443, Radarr at /radarr, Sonarr at /sonarr, Jellyfin off."
       ;;
     traefik-private-dns|traefik-public-dns)
       echo "Recommended Traefik defaults loaded: bundled Traefik on, Funnel auto-config off."
@@ -196,12 +197,16 @@ prompt_value NZBDAV_HOST "NZBDAV hostname"
 
 MODE_VALUE="$(get_value MODE)"
 if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
+  prompt_value INSTALL_TRAEFIK "Install bundled Traefik in front of Funnel path routes (recommended: true)"
   prompt_value AUTO_CONFIGURE_FUNNEL "Auto-configure Tailscale Funnel during install (recommended: true)"
   prompt_value FUNNEL_USE_PATHS "Use one hostname with path-based Funnel URLs (recommended: true)"
   prompt_value FUNNEL_RADARR "Expose Radarr through Funnel (recommended: true)"
   prompt_value FUNNEL_SONARR "Expose Sonarr through Funnel (recommended: true)"
   prompt_value FUNNEL_JELLYFIN "Expose Jellyfin through Funnel (recommended: false)"
   if [ "$(get_value FUNNEL_USE_PATHS)" = "true" ]; then
+    if [ "$(get_value INSTALL_TRAEFIK)" = "true" ]; then
+      prompt_value TRAEFIK_FUNNEL_PORT "Local Traefik port used behind Funnel (recommended: 8088)"
+    fi
     set_kv FUNNEL_RADARR_PUBLIC_PORT 443
     set_kv FUNNEL_SONARR_PUBLIC_PORT 443
     prompt_funnel_path FUNNEL_RADARR_PATH "Public Funnel path for Radarr (recommended: /radarr)"

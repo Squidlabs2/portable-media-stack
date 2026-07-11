@@ -52,6 +52,9 @@ if [ "$MODE" = "traefik-private-dns" ] || [ "$MODE" = "traefik-public-dns" ]; th
   else
     COMPOSE_FILES+=(-f compose.traefik-external.yml)
   fi
+elif [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+  COMPOSE_FILES+=(-f compose.funnel-traefik.yml)
+  COMPOSE_FILES+=(-f compose.funnel-traefik-bundled.yml)
 fi
 
 PROFILES=()
@@ -106,6 +109,9 @@ if [ "$MODE" = "traefik-private-dns" ] || [ "$MODE" = "traefik-public-dns" ]; th
 fi
 if [ "$MODE" = "tailscale-funnel" ]; then
   echo "Funnel auto-config: ${AUTO_CONFIGURE_FUNNEL:-false}"
+  if [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+    echo "Traefik front door: http://$(hostname -s):${TRAEFIK_FUNNEL_PORT:-8088}"
+  fi
   echo "Funnel helper: ./scripts/configure-funnel.sh"
   if [ "${AUTO_CONFIGURE_FUNNEL:-false}" = "true" ]; then
     funnel_expected_summary

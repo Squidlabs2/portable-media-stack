@@ -123,8 +123,14 @@ if [ "${FUNNEL_JELLYFIN:-false}" = "true" ]; then
 fi
 
 if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
-  run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr" "${FUNNEL_RADARR_PATH:-/radarr}"
-  run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr" "${FUNNEL_SONARR_PATH:-/sonarr}"
+  if [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+    funnel_proxy_target="http://127.0.0.1:${TRAEFIK_FUNNEL_PORT:-8088}"
+    run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "$funnel_proxy_target" "radarr" "${FUNNEL_RADARR_PATH:-/radarr}"
+    run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "$funnel_proxy_target" "sonarr" "${FUNNEL_SONARR_PATH:-/sonarr}"
+  else
+    run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr" "${FUNNEL_RADARR_PATH:-/radarr}"
+    run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr" "${FUNNEL_SONARR_PATH:-/sonarr}"
+  fi
 else
   run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr"
   run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr"

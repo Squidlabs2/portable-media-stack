@@ -1,0 +1,22 @@
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: ${STACK_NAME:-portable-media-stack}_traefik
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - "${TRAEFIK_FUNNEL_PORT:-8088}:8088"
+    command:
+      - --global.sendanonymoususage=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.funnel.address=:8088
+      - --api.dashboard=false
+      - --ping=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK:-proxy}

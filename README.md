@@ -103,7 +103,8 @@ Recommended defaults for your use case:
 - `FUNNEL_JELLYFIN_PUBLIC_PORT=10000`
 - `FUNNEL_RADARR_PATH=/radarr`
 - `FUNNEL_SONARR_PATH=/sonarr`
-- `INSTALL_TRAEFIK=false`
+- `INSTALL_TRAEFIK=true`
+- `TRAEFIK_FUNNEL_PORT=8088`
 
 The repo includes `scripts/configure-funnel.sh`, which can apply the Funnel config later.
 When Funnel auto-config is enabled, the installer now prints the expected public mapping and the Funnel helper/status output prints likely public URLs based on the machine's tailnet DNS name.
@@ -113,6 +114,7 @@ Path-based Funnel URLs look like:
 - `https://<device>.<tailnet>.ts.net/sonarr`
 
 The installer also updates Radarr and Sonarr `UrlBase` automatically when path-based Funnel mode is enabled.
+For Arr apps, the recommended path-based Funnel architecture is bundled Traefik listening on a local high port behind Funnel; Funnel points `/radarr` and `/sonarr` at Traefik, and Traefik strips the prefix before proxying upstream.
 
 ## Traefik options
 
@@ -127,6 +129,8 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `compose.traefik.yml` - Traefik labels shared by both Traefik setups
 - `compose.traefik-bundled.yml` - bundled Traefik service
 - `compose.traefik-external.yml` - external proxy network for an existing Traefik host
+- `compose.funnel-traefik.yml` - Traefik path-routing labels for Funnel mode
+- `compose.funnel-traefik-bundled.yml` - bundled Traefik service bound to a local high port for Funnel mode
 - `.env.example` - template for local `.env`
 - `scripts/bootstrap.sh` - one-liner entrypoint
 - `scripts/prepare-host-debian.sh` - optional Debian host prep for Docker, Compose, and Tailscale
