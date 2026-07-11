@@ -18,6 +18,14 @@ Recommended install:
 bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh)
 ```
 
+By default this installs the repo under `${HOME}/portable-media-stack`, so it automatically uses the current user on the machine rather than a hardcoded home path.
+
+If you want it under a `containers` workspace, use:
+
+```bash
+INSTALL_DIR="${HOME}/containers/portable-media-stack" bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh)
+```
+
 Safer/manual install:
 
 ```bash
