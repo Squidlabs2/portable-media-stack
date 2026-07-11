@@ -278,6 +278,26 @@ def ensure_sab_categories(config_path: Path, categories) -> bool:
     return True
 
 
+def ensure_sab_host_whitelist(config_path: Path, hosts) -> bool:
+    lines = config_path.read_text().splitlines()
+    for idx, line in enumerate(lines):
+        if not line.startswith("host_whitelist ="):
+            continue
+        current = [item.strip() for item in line.split("=", 1)[1].split(",") if item.strip()]
+        updated = list(current)
+        for host in hosts:
+            if host and host not in updated:
+                updated.append(host)
+        if updated == current:
+            return False
+        lines[idx] = f"host_whitelist = {', '.join(updated)}"
+        config_path.write_text("\n".join(lines) + "\n")
+        return True
+    lines.append(f"host_whitelist = {', '.join(host for host in hosts if host)}")
+    config_path.write_text("\n".join(lines) + "\n")
+    return True
+
+
 def restart_sabnzbd():
     subprocess.run(["docker", "compose", "restart", "sabnzbd"], cwd=ROOT_DIR, check=True, stdout=subprocess.DEVNULL)
 
@@ -405,6 +425,10 @@ def apply_data(input_path: Path, timeout_seconds: int):
         get_field_value(data["radarr"]["downloadClient"].get("fields", []), "movieCategory", ""),
     }
     if ensure_sab_categories(sabnzbd_config, required_sab_categories):
+        restart_sabnzbd()
+        wait_for_sab_api(sabnzbd_url, sabnzbd_key, timeout_seconds)
+
+    if ensure_sab_host_whitelist(sabnzbd_config, [sabnzbd_host, "localhost"]):
         restart_sabnzbd()
         wait_for_sab_api(sabnzbd_url, sabnzbd_key, timeout_seconds)
 
