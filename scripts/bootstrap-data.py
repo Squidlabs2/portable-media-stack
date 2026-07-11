@@ -323,13 +323,18 @@ def ensure_download_client(base_url: str, api_key: str, payload, label: str):
         return False
 
 
-def configure_download_client_payload(template, *, sab_host, sab_port, sab_api_key):
+def configure_download_client_payload(template, *, sab_host, sab_port, sab_api_key, sab_username, sab_password):
     payload = json.loads(json.dumps(template))
     set_field_value(payload["fields"], "host", sab_host)
     set_field_value(payload["fields"], "port", int(sab_port))
     set_field_value(payload["fields"], "useSsl", False)
     set_field_value(payload["fields"], "urlBase", "")
     set_field_value(payload["fields"], "apiKey", sab_api_key)
+    for optional, value in (("username", sab_username), ("password", sab_password)):
+        try:
+            set_field_value(payload["fields"], optional, value)
+        except RuntimeError:
+            pass
     return payload
 
 
@@ -374,6 +379,8 @@ def apply_data(input_path: Path, timeout_seconds: int):
     sonarr_key = read_api_key(str(sonarr_config))
     radarr_key = read_api_key(str(radarr_config))
     sabnzbd_key = read_ini_value(str(sabnzbd_config), "api_key")
+    sabnzbd_username = read_ini_value(str(sabnzbd_config), "username")
+    sabnzbd_password = read_ini_value(str(sabnzbd_config), "password")
 
     prowlarr_url = env("TARGET_PROWLARR_URL", f"http://127.0.0.1:{env('PROWLARR_PORT', '9696')}")
     sonarr_url = env("TARGET_SONARR_URL", f"http://127.0.0.1:{env('SONARR_PORT', '8989')}")
@@ -407,12 +414,16 @@ def apply_data(input_path: Path, timeout_seconds: int):
         sab_host=sabnzbd_host,
         sab_port=sabnzbd_port,
         sab_api_key=sabnzbd_key,
+        sab_username=sabnzbd_username,
+        sab_password=sabnzbd_password,
     )
     radarr_download_client = configure_download_client_payload(
         data["radarr"]["downloadClient"],
         sab_host=sabnzbd_host,
         sab_port=sabnzbd_port,
         sab_api_key=sabnzbd_key,
+        sab_username=sabnzbd_username,
+        sab_password=sabnzbd_password,
     )
     ensure_download_client(sonarr_url, sonarr_key, sonarr_download_client, "Sonarr")
     ensure_download_client(radarr_url, radarr_key, radarr_download_client, "Radarr")
