@@ -34,6 +34,11 @@ done
 
 mkdir -p "${CONFIG_ROOT:-./config}"
 
+if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
+  bootstrap_file="${BOOTSTRAP_DATA_FILE:-./bootstrap-data/local/bootstrap-data.json}"
+  [ -f "$bootstrap_file" ] || fail "AUTO_APPLY_BOOTSTRAP_DATA=true but bootstrap data file is missing: $bootstrap_file"
+fi
+
 if [ "${MODE:-tailnet-only}" != "tailnet-only" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
   mkdir -p "${TRAEFIK_CONFIG_DIR:-./config/traefik}"
   acme_file="${TRAEFIK_ACME_FILE:-${TRAEFIK_CONFIG_DIR:-./config/traefik}/acme.json}"

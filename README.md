@@ -81,6 +81,8 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `scripts/install.sh` - orchestrates setup
 - `scripts/configure.sh` - generates `.env`
 - `scripts/configure-funnel.sh` - applies Tailscale Funnel config from `.env`
+- `scripts/export-bootstrap-data.sh` - exports reusable indexer/downloader seed data from a live stack
+- `scripts/apply-bootstrap-data.sh` - applies reusable indexer/downloader seed data to a fresh install
 - `scripts/preflight.sh` - validates prerequisites and prepares Traefik ACME storage
 - `scripts/create-networks.sh` - creates external Docker networks when needed
 - `scripts/update.sh` - pulls repo and refreshes containers
@@ -89,16 +91,47 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 
 - Real secrets and machine-specific values stay out of git.
 - `.env` is created locally during install.
+- `bootstrap-data/local/bootstrap-data.json` is local-only and ignored by git because it can contain API keys and indexer credentials.
 - `bootstrap.sh` is intentionally small; all real logic lives in versioned repo scripts.
 - Tailscale stays on the host; SSH and other host access remain independent of this stack.
 - For public Radarr/Sonarr exposure, use strong app credentials.
 - Tailscale Funnel uses your tailnet's `*.ts.net` naming, not your own custom public CNAMEs.
 
+## Automating fresh Arr setup from your current stack
+
+If you want a clean new install but want it to reuse your current Prowlarr indexers and SABnzbd wiring:
+
+1. On the current working machine, run:
+
+```bash
+./scripts/export-bootstrap-data.sh
+```
+
+2. Keep the generated local-only file at:
+
+```text
+bootstrap-data/local/bootstrap-data.json
+```
+
+3. On the new machine, set these in `.env`:
+
+```text
+AUTO_APPLY_BOOTSTRAP_DATA=true
+BOOTSTRAP_DATA_FILE=./bootstrap-data/local/bootstrap-data.json
+```
+
+4. Run the install normally. After the fresh containers start, the stack will automatically:
+- import Prowlarr indexers
+- create a Sonarr app connection in Prowlarr
+- create a Radarr app connection in Prowlarr
+- create the SABnzbd download client in Sonarr
+- create the SABnzbd download client in Radarr
+
+If an exported indexer has bad or missing credentials, bootstrap apply will warn and skip that indexer instead of aborting the whole install. That lets the fresh stack still finish wiring Sonarr, Radarr, Prowlarr app sync, and SABnzbd.
+
+This is designed for a fresh single-Radarr install, not for copying old full app configs.
+
 ## Next setup tasks after first boot
 
-- configure SABnzbd server credentials
-- connect Prowlarr to indexers
-- connect Prowlarr to Radarr and Sonarr
-- connect SABnzbd as the download client in Radarr and Sonarr
 - add Jellyfin libraries for movies and TV
 - create DNS records only if you are using a Traefik DNS mode

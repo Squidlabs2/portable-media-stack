@@ -58,6 +58,9 @@ if [ "$DRY_RUN" = true ]; then
       echo "Expected public mapping: Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}, Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}, Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000} if enabled"
     fi
   fi
+  if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
+    echo "Dry run note: Bootstrap data would be applied from ${BOOTSTRAP_DATA_FILE:-./bootstrap-data/local/bootstrap-data.json}"
+  fi
   exit 0
 fi
 
@@ -65,6 +68,10 @@ docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
 
 if [ "$MODE" = "tailscale-funnel" ]; then
   ./scripts/configure-funnel.sh
+fi
+
+if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
+  ./scripts/apply-bootstrap-data.sh --input "${BOOTSTRAP_DATA_FILE:-./bootstrap-data/local/bootstrap-data.json}" --timeout "${BOOTSTRAP_WAIT_SECONDS:-180}"
 fi
 
 echo
@@ -89,4 +96,7 @@ if [ "$MODE" = "tailscale-funnel" ]; then
   if [ "${AUTO_CONFIGURE_FUNNEL:-false}" = "true" ]; then
     echo "Expected public mapping: Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}, Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}, Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000} if enabled"
   fi
+fi
+if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
+  echo "Bootstrap data applied from: ${BOOTSTRAP_DATA_FILE:-./bootstrap-data/local/bootstrap-data.json}"
 fi

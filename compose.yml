@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     networks:
       - media
+      - egress
     ports:
       - "${JELLYFIN_PORT:-8096}:8096"
     environment:
@@ -24,6 +25,7 @@ services:
     restart: unless-stopped
     networks:
       - media
+      - egress
     ports:
       - "${RADARR_PORT:-7878}:7878"
     environment:
@@ -41,6 +43,7 @@ services:
     restart: unless-stopped
     networks:
       - media
+      - egress
     ports:
       - "${SONARR_PORT:-8989}:8989"
     environment:
