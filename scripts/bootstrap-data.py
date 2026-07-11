@@ -65,6 +65,16 @@ def read_api_key(config_path: str) -> str:
     return key
 
 
+def read_url_base(config_path: str) -> str:
+    root = ET.parse(config_path).getroot()
+    value = (root.findtext("UrlBase") or "").strip()
+    if not value:
+        return ""
+    if not value.startswith("/"):
+        value = f"/{value}"
+    return value.rstrip("/")
+
+
 def read_ini_value(config_path: str, key_name: str) -> str:
     for line in Path(config_path).read_text().splitlines():
         if line.startswith(f"{key_name} ="):
@@ -401,15 +411,18 @@ def apply_data(input_path: Path, timeout_seconds: int):
     sabnzbd_key = read_ini_value(str(sabnzbd_config), "api_key")
     sabnzbd_username = read_ini_value(str(sabnzbd_config), "username")
     sabnzbd_password = read_ini_value(str(sabnzbd_config), "password")
+    prowlarr_url_base = read_url_base(str(prowlarr_config))
+    sonarr_url_base = read_url_base(str(sonarr_config))
+    radarr_url_base = read_url_base(str(radarr_config))
 
-    prowlarr_url = env("TARGET_PROWLARR_URL", f"http://127.0.0.1:{env('PROWLARR_PORT', '9696')}")
-    sonarr_url = env("TARGET_SONARR_URL", f"http://127.0.0.1:{env('SONARR_PORT', '8989')}")
-    radarr_url = env("TARGET_RADARR_URL", f"http://127.0.0.1:{env('RADARR_PORT', '7878')}")
+    prowlarr_url = env("TARGET_PROWLARR_URL", f"http://127.0.0.1:{env('PROWLARR_PORT', '9696')}{prowlarr_url_base}")
+    sonarr_url = env("TARGET_SONARR_URL", f"http://127.0.0.1:{env('SONARR_PORT', '8989')}{sonarr_url_base}")
+    radarr_url = env("TARGET_RADARR_URL", f"http://127.0.0.1:{env('RADARR_PORT', '7878')}{radarr_url_base}")
     sabnzbd_url = env("TARGET_SABNZBD_URL", f"http://127.0.0.1:{env('SABNZBD_PORT', '8080')}")
 
-    internal_prowlarr_url = env("TARGET_INTERNAL_PROWLARR_URL", "http://prowlarr:9696")
-    internal_sonarr_url = env("TARGET_INTERNAL_SONARR_URL", "http://sonarr:8989")
-    internal_radarr_url = env("TARGET_INTERNAL_RADARR_URL", "http://radarr:7878")
+    internal_prowlarr_url = env("TARGET_INTERNAL_PROWLARR_URL", f"http://prowlarr:9696{prowlarr_url_base}")
+    internal_sonarr_url = env("TARGET_INTERNAL_SONARR_URL", f"http://sonarr:8989{sonarr_url_base}")
+    internal_radarr_url = env("TARGET_INTERNAL_RADARR_URL", f"http://radarr:7878{radarr_url_base}")
     sabnzbd_host = env("TARGET_INTERNAL_SABNZBD_HOST", "")
     if not sabnzbd_host:
         sabnzbd_host = read_ini_value(str(sabnzbd_config), "host_whitelist").split(",", 1)[0].strip() or "sabnzbd"
