@@ -24,13 +24,32 @@ validate_port() {
   esac
 }
 
+normalize_path() {
+  local value="$1"
+  [ -n "$value" ] || value="/"
+  case "$value" in
+    /*) ;;
+    *) value="/$value" ;;
+  esac
+  value="${value%/}"
+  [ -n "$value" ] || value="/"
+  printf '%s\n' "$value"
+}
+
 public_url() {
   local dns_name="$1"
   local public_port="$2"
+  local public_path="${3:-}"
+  local base
   case "$public_port" in
-    443) printf 'https://%s' "$dns_name" ;;
-    *) printf 'https://%s:%s' "$dns_name" "$public_port" ;;
+    443) base="https://${dns_name}" ;;
+    *) base="https://${dns_name}:${public_port}" ;;
   esac
+  if [ -n "$public_path" ]; then
+    printf '%s%s\n' "$base" "$(normalize_path "$public_path")"
+  else
+    printf '%s\n' "$base"
+  fi
 }
 
 print_url_hint() {
@@ -38,13 +57,14 @@ print_url_hint() {
   local public_port="$2"
   local name="$3"
   local dns_name="$4"
+  local public_path="${5:-}"
 
   if [ "$enabled" != "true" ]; then
     return 0
   fi
 
   validate_port "$public_port"
-  echo "$name public URL: $(public_url "$dns_name" "$public_port")"
+  echo "$name public URL: $(public_url "$dns_name" "$public_port" "$public_path")"
 }
 
 need_cmd tailscale
@@ -66,6 +86,7 @@ run_funnel() {
   local public_port="$2"
   local target_url="$3"
   local name="$4"
+  local public_path="${5:-}"
 
   if [ "$enabled" != "true" ]; then
     return 0
@@ -73,12 +94,23 @@ run_funnel() {
 
   validate_port "$public_port"
 
-  echo "Configuring Funnel for $name on public port $public_port -> $target_url"
-  tailscale funnel --bg --yes --https="$public_port" "$target_url"
+  if [ -n "$public_path" ]; then
+    public_path="$(normalize_path "$public_path")"
+    echo "Configuring Funnel for $name on public port $public_port path $public_path -> $target_url"
+    tailscale funnel --bg --yes --https="$public_port" --set-path="$public_path" "$target_url"
+  else
+    echo "Configuring Funnel for $name on public port $public_port -> $target_url"
+    tailscale funnel --bg --yes --https="$public_port" "$target_url"
+  fi
 }
 
-run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr"
-run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr"
+if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
+  run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr" "${FUNNEL_RADARR_PATH:-/radarr}"
+  run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr" "${FUNNEL_SONARR_PATH:-/sonarr}"
+else
+  run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr"
+  run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr"
+fi
 run_funnel "${FUNNEL_JELLYFIN:-false}" "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" "http://127.0.0.1:${JELLYFIN_PORT:-8096}" "jellyfin"
 
 dns_name="$(tailscale status --json | python3 -c 'import sys,json; d=json.load(sys.stdin); print((d.get("Self",{}).get("DNSName","") or "").rstrip("."))')"
@@ -89,7 +121,12 @@ tailscale funnel status
 echo
 if [ -n "$dns_name" ]; then
   echo "Likely public URLs:"
-  print_url_hint "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "Radarr" "$dns_name"
-  print_url_hint "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "Sonarr" "$dns_name"
+  if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
+    print_url_hint "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "Radarr" "$dns_name" "${FUNNEL_RADARR_PATH:-/radarr}"
+    print_url_hint "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "Sonarr" "$dns_name" "${FUNNEL_SONARR_PATH:-/sonarr}"
+  else
+    print_url_hint "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "Radarr" "$dns_name"
+    print_url_hint "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "Sonarr" "$dns_name"
+  fi
   print_url_hint "${FUNNEL_JELLYFIN:-false}" "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" "Jellyfin" "$dns_name"
 fi

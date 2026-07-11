@@ -85,23 +85,34 @@ Yes: the installer asks configuration questions during setup and writes the answ
 
 Installer prompts cover:
 - whether to auto-configure Funnel during install
+- whether to use one hostname with path-based URLs
 - whether to expose Radarr
 - whether to expose Sonarr
 - whether to expose Jellyfin
-- which public Funnel ports to use (443, 8443, 10000)
+- which public Funnel paths to use for Radarr/Sonarr when path-based mode is enabled
+- which public Funnel ports to use when path-based mode is disabled
 
 Recommended defaults for your use case:
 - `AUTO_CONFIGURE_FUNNEL=true`
+- `FUNNEL_USE_PATHS=true`
 - `FUNNEL_RADARR=true`
 - `FUNNEL_SONARR=true`
 - `FUNNEL_JELLYFIN=false`
 - `FUNNEL_RADARR_PUBLIC_PORT=443`
-- `FUNNEL_SONARR_PUBLIC_PORT=8443`
+- `FUNNEL_SONARR_PUBLIC_PORT=443`
 - `FUNNEL_JELLYFIN_PUBLIC_PORT=10000`
+- `FUNNEL_RADARR_PATH=/radarr`
+- `FUNNEL_SONARR_PATH=/sonarr`
 - `INSTALL_TRAEFIK=false`
 
 The repo includes `scripts/configure-funnel.sh`, which can apply the Funnel config later.
 When Funnel auto-config is enabled, the installer now prints the expected public mapping and the Funnel helper/status output prints likely public URLs based on the machine's tailnet DNS name.
+
+Path-based Funnel URLs look like:
+- `https://<device>.<tailnet>.ts.net/radarr`
+- `https://<device>.<tailnet>.ts.net/sonarr`
+
+The installer also updates Radarr and Sonarr `UrlBase` automatically when path-based Funnel mode is enabled.
 
 ## Traefik options
 
@@ -121,6 +132,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `scripts/prepare-host-debian.sh` - optional Debian host prep for Docker, Compose, and Tailscale
 - `scripts/install.sh` - orchestrates setup
 - `scripts/configure.sh` - generates `.env`
+- `scripts/configure-arr-url-bases.sh` - sets Radarr/Sonarr UrlBase for path-based Funnel URLs
 - `scripts/configure-funnel.sh` - applies Tailscale Funnel config from `.env`
 - `scripts/export-bootstrap-data.sh` - exports reusable indexer/downloader seed data from a live stack
 - `scripts/apply-bootstrap-data.sh` - applies reusable indexer/downloader seed data to a fresh install

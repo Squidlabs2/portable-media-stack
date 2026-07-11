@@ -17,6 +17,19 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+funnel_expected_summary() {
+  if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
+    printf 'Expected public mapping: Radarr at %s, Sonarr at %s' \
+      "${FUNNEL_RADARR_PATH:-/radarr}" "${FUNNEL_SONARR_PATH:-/sonarr}"
+    if [ "${FUNNEL_JELLYFIN:-false}" = "true" ]; then
+      printf ', Jellyfin on port %s' "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}"
+    fi
+    printf '\n'
+  else
+    echo "Expected public mapping: Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}, Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}, Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000} if enabled"
+  fi
+}
+
 if [ "$NON_INTERACTIVE" = true ]; then
   ./scripts/configure.sh --non-interactive
 else
@@ -55,7 +68,7 @@ if [ "$DRY_RUN" = true ]; then
   if [ "$MODE" = "tailscale-funnel" ]; then
     echo "Dry run note: Funnel would be configured via ./scripts/configure-funnel.sh"
     if [ "${AUTO_CONFIGURE_FUNNEL:-false}" = "true" ]; then
-      echo "Expected public mapping: Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}, Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}, Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000} if enabled"
+      funnel_expected_summary
     fi
   fi
   if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
@@ -67,6 +80,7 @@ fi
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
 
 if [ "$MODE" = "tailscale-funnel" ]; then
+  ./scripts/configure-arr-url-bases.sh
   ./scripts/configure-funnel.sh
 fi
 
@@ -94,7 +108,7 @@ if [ "$MODE" = "tailscale-funnel" ]; then
   echo "Funnel auto-config: ${AUTO_CONFIGURE_FUNNEL:-false}"
   echo "Funnel helper: ./scripts/configure-funnel.sh"
   if [ "${AUTO_CONFIGURE_FUNNEL:-false}" = "true" ]; then
-    echo "Expected public mapping: Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}, Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}, Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000} if enabled"
+    funnel_expected_summary
   fi
 fi
 if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then

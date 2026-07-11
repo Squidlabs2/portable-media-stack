@@ -30,6 +30,18 @@ legacy_or_empty() {
   return 1
 }
 
+normalize_funnel_path() {
+  local value="$1"
+  [ -n "$value" ] || value="/"
+  case "$value" in
+    /*) ;;
+    *) value="/$value" ;;
+  esac
+  value="${value%/}"
+  [ -n "$value" ] || value="/"
+  printf '%s\n' "$value"
+}
+
 set_kv() {
   local key="$1"
   local value="$2"
@@ -98,6 +110,23 @@ prompt_value() {
   set_kv "$key" "$answer"
 }
 
+prompt_funnel_path() {
+  local key="$1"
+  local prompt="$2"
+  local current
+  local answer
+  current="$(normalize_funnel_path "$(get_value "$key")")"
+
+  if [ "$NON_INTERACTIVE" = true ]; then
+    answer="${!key:-$current}"
+  else
+    read -r -p "$prompt [$current]: " answer
+    answer="${answer:-$current}"
+  fi
+
+  set_kv "$key" "$(normalize_funnel_path "$answer")"
+}
+
 apply_mode_defaults() {
   local mode
   mode="$(get_value MODE)"
@@ -107,12 +136,16 @@ apply_mode_defaults() {
       set_kv INSTALL_TRAEFIK false
       set_kv ENABLE_PUBLIC_HOSTNAMES false
       set_kv AUTO_CONFIGURE_FUNNEL true
+      set_kv FUNNEL_USE_PATHS true
       set_kv FUNNEL_RADARR true
       set_kv FUNNEL_SONARR true
       set_kv FUNNEL_JELLYFIN false
       set_kv FUNNEL_RADARR_PUBLIC_PORT 443
-      set_kv FUNNEL_SONARR_PUBLIC_PORT 8443
+      set_kv FUNNEL_SONARR_PUBLIC_PORT 443
       set_kv FUNNEL_JELLYFIN_PUBLIC_PORT 10000
+      set_kv FUNNEL_RADARR_PATH /radarr
+      set_kv FUNNEL_SONARR_PATH /sonarr
+      set_kv FUNNEL_JELLYFIN_PATH /jellyfin
       ;;
     traefik-private-dns|traefik-public-dns)
       set_kv INSTALL_TRAEFIK true
@@ -132,7 +165,7 @@ apply_mode_defaults
 if [ "$NON_INTERACTIVE" = false ]; then
   case "$(get_value MODE)" in
     tailscale-funnel)
-      echo "Recommended Funnel defaults loaded: bundled Traefik off, Radarr on 443, Sonarr on 8443, Jellyfin off."
+      echo "Recommended Funnel defaults loaded: bundled Traefik off, one hostname on 443, Radarr at /radarr, Sonarr at /sonarr, Jellyfin off."
       ;;
     traefik-private-dns|traefik-public-dns)
       echo "Recommended Traefik defaults loaded: bundled Traefik on, Funnel auto-config off."
@@ -164,12 +197,23 @@ prompt_value NZBDAV_HOST "NZBDAV hostname"
 MODE_VALUE="$(get_value MODE)"
 if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
   prompt_value AUTO_CONFIGURE_FUNNEL "Auto-configure Tailscale Funnel during install (recommended: true)"
+  prompt_value FUNNEL_USE_PATHS "Use one hostname with path-based Funnel URLs (recommended: true)"
   prompt_value FUNNEL_RADARR "Expose Radarr through Funnel (recommended: true)"
   prompt_value FUNNEL_SONARR "Expose Sonarr through Funnel (recommended: true)"
   prompt_value FUNNEL_JELLYFIN "Expose Jellyfin through Funnel (recommended: false)"
-  prompt_value FUNNEL_RADARR_PUBLIC_PORT "Public Funnel port for Radarr (recommended: 443)"
-  prompt_value FUNNEL_SONARR_PUBLIC_PORT "Public Funnel port for Sonarr (recommended: 8443)"
-  prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000 if enabled)"
+  if [ "$(get_value FUNNEL_USE_PATHS)" = "true" ]; then
+    set_kv FUNNEL_RADARR_PUBLIC_PORT 443
+    set_kv FUNNEL_SONARR_PUBLIC_PORT 443
+    prompt_funnel_path FUNNEL_RADARR_PATH "Public Funnel path for Radarr (recommended: /radarr)"
+    prompt_funnel_path FUNNEL_SONARR_PATH "Public Funnel path for Sonarr (recommended: /sonarr)"
+    if [ "$(get_value FUNNEL_JELLYFIN)" = "true" ]; then
+      prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000)"
+    fi
+  else
+    prompt_value FUNNEL_RADARR_PUBLIC_PORT "Public Funnel port for Radarr (recommended: 443)"
+    prompt_value FUNNEL_SONARR_PUBLIC_PORT "Public Funnel port for Sonarr (recommended: 8443)"
+    prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000 if enabled)"
+  fi
 elif [ "$MODE_VALUE" = "traefik-private-dns" ] || [ "$MODE_VALUE" = "traefik-public-dns" ]; then
   prompt_value INSTALL_TRAEFIK "Install bundled Traefik (recommended: true)"
   prompt_value TRAEFIK_HTTP_PORT "Traefik HTTP port"
