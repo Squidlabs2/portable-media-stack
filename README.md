@@ -141,6 +141,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `scripts/configure-funnel.sh` - applies Tailscale Funnel config from `.env`
 - `scripts/write-funnel-traefik-config.sh` - generates the bundled Traefik dynamic config used behind Funnel path routes
 - `scripts/export-bootstrap-data.sh` - exports reusable indexer/downloader seed data from a live stack
+- `scripts/fetch-bootstrap-data.sh` - pulls the latest saved bootstrap artifact from another machine over SSH
 - `scripts/apply-bootstrap-data.sh` - applies reusable indexer/downloader seed data to a fresh install
 - `scripts/preflight.sh` - validates prerequisites and prepares Traefik ACME storage
 - `scripts/create-networks.sh` - creates external Docker networks when needed
@@ -151,6 +152,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - Real secrets and machine-specific values stay out of git.
 - `.env` is created locally during install.
 - `bootstrap-data/local/bootstrap-data.json` is local-only and ignored by git because it can contain API keys and indexer credentials.
+- `./scripts/export-bootstrap-data.sh` also refreshes a reusable bootstrap library under `${HOME}/.local/share/portable-media-stack/bootstrap-data/`, including `latest-bootstrap-data.json` plus timestamped history copies for future machines.
 - `bootstrap.sh` is intentionally small; all real logic lives in versioned repo scripts.
 - `scripts/prepare-host-debian.sh` is Debian-only and optional; use it on fresh machines that still need Docker/Tailscale installed.
 - Tailscale stays on the host; SSH and other host access remain independent of this stack.
@@ -172,9 +174,9 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
    - `DOWNLOADS_PATH=$HOME/downloads`
    - `MOVIES_PATH=$HOME/media/movies`
    - `TV_PATH=$HOME/media/tv`
-5. If you exported bootstrap data from another machine, enable:
+5. If you exported bootstrap data from another machine, you can either fetch it with `./scripts/fetch-bootstrap-data.sh user@source-host` or restore the latest saved copy under `${HOME}/.local/share/portable-media-stack/bootstrap-data/`, then enable:
    - `AUTO_APPLY_BOOTSTRAP_DATA=true`
-   - `BOOTSTRAP_DATA_FILE=./bootstrap-data/local/bootstrap-data.json`
+   - `BOOTSTRAP_DATA_FILE=${HOME}/.local/share/portable-media-stack/bootstrap-data/latest-bootstrap-data.json`
 
 ## Automating fresh Arr setup from your current stack
 
@@ -186,20 +188,39 @@ If you want a clean new install but want it to reuse your current Prowlarr index
 ./scripts/export-bootstrap-data.sh
 ```
 
-2. Keep the generated local-only file at:
+2. The export refreshes both:
 
 ```text
 bootstrap-data/local/bootstrap-data.json
+~/.local/share/portable-media-stack/bootstrap-data/latest-bootstrap-data.json
 ```
 
-3. On the new machine, set these in `.env`:
+and also writes a timestamped archive copy under:
+
+```text
+~/.local/share/portable-media-stack/bootstrap-data/history/
+```
+
+3. On the new machine, the easiest transfer path is:
+
+```bash
+./scripts/fetch-bootstrap-data.sh user@source-host
+```
+
+That copies the saved `latest-bootstrap-data.json` from the source host into `./bootstrap-data/local/bootstrap-data.json` on the new machine.
+
+4. In `.env`, enable:
 
 ```text
 AUTO_APPLY_BOOTSTRAP_DATA=true
-BOOTSTRAP_DATA_FILE=./bootstrap-data/local/bootstrap-data.json
+BOOTSTRAP_DATA_FILE=${HOME}/.local/share/portable-media-stack/bootstrap-data/latest-bootstrap-data.json
 ```
 
-4. Run the install normally. After the fresh containers start, the stack will automatically:
+If that file is missing, `install.sh` also falls back automatically to:
+- `${BOOTSTRAP_LIBRARY_DIR}/latest-bootstrap-data.json`
+- `./bootstrap-data/local/bootstrap-data.json`
+
+5. Run the install normally. After the fresh containers start, the stack will automatically:
 - import Prowlarr indexers
 - create a Sonarr app connection in Prowlarr
 - create a Radarr app connection in Prowlarr

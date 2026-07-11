@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -13,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_BOOTSTRAP_LIBRARY_DIR = Path.home() / ".local/share/portable-media-stack/bootstrap-data"
 
 PROWLARR_ALLOWED_KEYS = {
     "appProfileId",
@@ -186,6 +188,28 @@ def enrich_indexer_fields_from_db(indexers, db_path: Path):
     return indexers
 
 
+def bootstrap_library_paths():
+    library_dir_raw = env("BOOTSTRAP_LIBRARY_DIR", str(DEFAULT_BOOTSTRAP_LIBRARY_DIR)).strip()
+    if not library_dir_raw:
+        return None, None, None
+    library_dir = Path(os.path.expanduser(library_dir_raw))
+    latest_path = library_dir / "latest-bootstrap-data.json"
+    archive_path = library_dir / "history" / f"bootstrap-data-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}.json"
+    return library_dir, latest_path, archive_path
+
+
+def write_bootstrap_library_copies(output_path: Path):
+    library_dir, latest_path, archive_path = bootstrap_library_paths()
+    if library_dir is None or latest_path is None or archive_path is None:
+        return
+    latest_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(output_path, latest_path)
+    shutil.copy2(output_path, archive_path)
+    print(f"Updated bootstrap library latest copy: {latest_path}")
+    print(f"Archived bootstrap library copy: {archive_path}")
+
+
 def export_data(output_path: Path):
     prowlarr_url = env("SOURCE_PROWLARR_URL", "http://127.0.0.1:9696")
     sonarr_url = env("SOURCE_SONARR_URL", "http://127.0.0.1:8989")
@@ -234,6 +258,7 @@ def export_data(output_path: Path):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2) + "\n")
     print(f"Exported bootstrap data to {output_path}")
+    write_bootstrap_library_copies(output_path)
     print(f"- Prowlarr indexers: {len(payload['prowlarr']['indexers'])}")
     print("- Prowlarr application templates: sonarr, radarr")
     print("- Download client templates: sonarr SABnzbd, radarr SABnzbd")

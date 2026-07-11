@@ -93,6 +93,21 @@ apply_path_defaults() {
   fi
 }
 
+apply_bootstrap_defaults() {
+  local home_dir library_dir latest_file
+  home_dir="${HOME:-$ROOT_DIR}"
+  library_dir="$home_dir/.local/share/portable-media-stack/bootstrap-data"
+  latest_file="$library_dir/latest-bootstrap-data.json"
+
+  if legacy_or_empty "$(get_value BOOTSTRAP_DATA_FILE)" "./bootstrap-data/local/bootstrap-data.json"; then
+    set_kv BOOTSTRAP_DATA_FILE "$latest_file"
+  fi
+
+  if legacy_or_empty "$(get_value BOOTSTRAP_LIBRARY_DIR)"; then
+    set_kv BOOTSTRAP_LIBRARY_DIR "$library_dir"
+  fi
+}
+
 prompt_value() {
   local key="$1"
   local prompt="$2"
@@ -160,6 +175,7 @@ apply_mode_defaults() {
 }
 
 apply_path_defaults
+apply_bootstrap_defaults
 
 prompt_value MODE "Deployment mode (tailnet-only|tailscale-funnel|traefik-private-dns|traefik-public-dns)"
 apply_mode_defaults

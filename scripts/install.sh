@@ -30,6 +30,24 @@ funnel_expected_summary() {
   fi
 }
 
+resolve_bootstrap_data_file() {
+  local configured fallback_home fallback_repo candidate
+  configured="${BOOTSTRAP_DATA_FILE:-}"
+  fallback_home="${BOOTSTRAP_LIBRARY_DIR:-${HOME}/.local/share/portable-media-stack/bootstrap-data}/latest-bootstrap-data.json"
+  fallback_repo="./bootstrap-data/local/bootstrap-data.json"
+
+  for candidate in "$configured" "$fallback_home" "$fallback_repo"; do
+    [ -n "$candidate" ] || continue
+    if [ -f "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  echo "ERROR: AUTO_APPLY_BOOTSTRAP_DATA=true but no bootstrap data file was found. Checked: ${configured:-<empty>}, $fallback_home, $fallback_repo" >&2
+  return 1
+}
+
 if [ "$NON_INTERACTIVE" = true ]; then
   ./scripts/configure.sh --non-interactive
 else
@@ -92,7 +110,8 @@ if [ "$MODE" = "tailscale-funnel" ]; then
 fi
 
 if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
-  ./scripts/apply-bootstrap-data.sh --input "${BOOTSTRAP_DATA_FILE:-./bootstrap-data/local/bootstrap-data.json}" --timeout "${BOOTSTRAP_WAIT_SECONDS:-180}"
+  BOOTSTRAP_INPUT="$(resolve_bootstrap_data_file)"
+  ./scripts/apply-bootstrap-data.sh --input "$BOOTSTRAP_INPUT" --timeout "${BOOTSTRAP_WAIT_SECONDS:-180}"
 fi
 
 echo
@@ -122,5 +141,5 @@ if [ "$MODE" = "tailscale-funnel" ]; then
   fi
 fi
 if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
-  echo "Bootstrap data applied from: ${BOOTSTRAP_DATA_FILE:-./bootstrap-data/local/bootstrap-data.json}"
+  echo "Bootstrap data applied from: $BOOTSTRAP_INPUT"
 fi
