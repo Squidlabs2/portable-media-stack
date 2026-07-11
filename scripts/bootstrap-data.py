@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import time
@@ -158,6 +159,33 @@ def get_field_value(fields, field_name, default=None):
     return default
 
 
+def read_prowlarr_indexer_settings(db_path: Path):
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute("select Id, Name, Settings from Indexers")
+        by_id = {}
+        by_name = {}
+        for idx, name, settings_json in cur.fetchall():
+            settings = json.loads(settings_json or "{}")
+            by_id[idx] = settings
+            by_name[name] = settings
+        return by_id, by_name
+    finally:
+        conn.close()
+
+
+def enrich_indexer_fields_from_db(indexers, db_path: Path):
+    by_id, by_name = read_prowlarr_indexer_settings(db_path)
+    for indexer in indexers:
+        settings = by_id.get(indexer.get("id")) or by_name.get(indexer.get("name")) or {}
+        for field in indexer.get("fields", []):
+            field_name = field.get("name")
+            if field_name in settings and settings[field_name] not in (None, ""):
+                field["value"] = settings[field_name]
+    return indexers
+
+
 def export_data(output_path: Path):
     prowlarr_url = env("SOURCE_PROWLARR_URL", "http://127.0.0.1:9696")
     sonarr_url = env("SOURCE_SONARR_URL", "http://127.0.0.1:8989")
@@ -166,8 +194,10 @@ def export_data(output_path: Path):
     prowlarr_key = read_api_key(env("SOURCE_PROWLARR_CONFIG_XML", "/media/dockerfiles/prowlarr/config.xml"))
     sonarr_key = read_api_key(env("SOURCE_SONARR_CONFIG_XML", "/media/dockerfiles/sonarr/config.xml"))
     radarr_key = read_api_key(env("SOURCE_RADARR_CONFIG_XML", "/media/dockerfiles/radarr/config.xml"))
+    prowlarr_db = Path(env("SOURCE_PROWLARR_DB", str(Path(env("SOURCE_PROWLARR_CONFIG_XML", "/media/dockerfiles/prowlarr/config.xml")).with_name("prowlarr.db"))))
 
     prowlarr_indexers = http_json(f"{prowlarr_url}/api/v1/indexer", prowlarr_key) or []
+    prowlarr_indexers = enrich_indexer_fields_from_db(prowlarr_indexers, prowlarr_db)
     prowlarr_apps = http_json(f"{prowlarr_url}/api/v1/applications", prowlarr_key) or []
     sonarr_clients = http_json(f"{sonarr_url}/api/v3/downloadclient", sonarr_key) or []
     radarr_clients = http_json(f"{radarr_url}/api/v3/downloadclient", radarr_key) or []
