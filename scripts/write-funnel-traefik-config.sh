@@ -41,26 +41,11 @@ http:
         - funnel
       rule: PathPrefix(\`${radarr_path}\`)
       service: funnel-radarr
-      middlewares:
-        - funnel-radarr-strip
     funnel-sonarr:
       entryPoints:
         - funnel
       rule: PathPrefix(\`${sonarr_path}\`)
       service: funnel-sonarr
-      middlewares:
-        - funnel-sonarr-strip
-  middlewares:
-    funnel-radarr-strip:
-      stripPrefix:
-        prefixes:
-          - ${radarr_path}
-        forceSlash: false
-    funnel-sonarr-strip:
-      stripPrefix:
-        prefixes:
-          - ${sonarr_path}
-        forceSlash: false
   services:
     funnel-radarr:
       loadBalancer:
