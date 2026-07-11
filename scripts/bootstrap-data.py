@@ -330,11 +330,6 @@ def configure_download_client_payload(template, *, sab_host, sab_port, sab_api_k
     set_field_value(payload["fields"], "useSsl", False)
     set_field_value(payload["fields"], "urlBase", "")
     set_field_value(payload["fields"], "apiKey", sab_api_key)
-    for optional in ("username", "password"):
-        try:
-            set_field_value(payload["fields"], optional, "")
-        except RuntimeError:
-            pass
     return payload
 
 
