@@ -29,6 +29,10 @@ if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   PROFILES+=(--profile nzbdav)
 fi
 
+if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+  ./scripts/write-funnel-traefik-config.sh
+fi
+
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" pull
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
 

@@ -115,6 +115,7 @@ Path-based Funnel URLs look like:
 
 The installer also updates Radarr and Sonarr `UrlBase` automatically when path-based Funnel mode is enabled.
 For Arr apps, the recommended path-based Funnel architecture is bundled Traefik listening on a local high port behind Funnel; Funnel points `/radarr` and `/sonarr` at Traefik, and Traefik strips the prefix before proxying upstream.
+In Funnel mode, the bundled Traefik front door now uses a generated file-provider config rather than Traefik's Docker provider.
 
 ## Traefik options
 
@@ -138,6 +139,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `scripts/configure.sh` - generates `.env`
 - `scripts/configure-arr-url-bases.sh` - sets Radarr/Sonarr UrlBase for path-based Funnel URLs
 - `scripts/configure-funnel.sh` - applies Tailscale Funnel config from `.env`
+- `scripts/write-funnel-traefik-config.sh` - generates the bundled Traefik dynamic config used behind Funnel path routes
 - `scripts/export-bootstrap-data.sh` - exports reusable indexer/downloader seed data from a live stack
 - `scripts/apply-bootstrap-data.sh` - applies reusable indexer/downloader seed data to a fresh install
 - `scripts/preflight.sh` - validates prerequisites and prepares Traefik ACME storage

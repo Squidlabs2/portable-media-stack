@@ -48,4 +48,8 @@ if [ "${MODE:-tailnet-only}" != "tailnet-only" ] && [ "${INSTALL_TRAEFIK:-true}"
   chmod 600 "$acme_file"
 fi
 
+if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+  mkdir -p "${TRAEFIK_FUNNEL_CONFIG_DIR:-./config/traefik-funnel}"
+fi
+
 echo "Preflight checks passed"

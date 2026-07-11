@@ -9,13 +9,13 @@ services:
       - "${TRAEFIK_FUNNEL_PORT:-8088}:8088"
     command:
       - --global.sendanonymoususage=false
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
       - --entrypoints.funnel.address=:8088
       - --api.dashboard=false
       - --ping=true
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${TRAEFIK_FUNNEL_CONFIG_DIR:-./config/traefik-funnel}:/etc/traefik/dynamic:ro
 
 networks:
   proxy:

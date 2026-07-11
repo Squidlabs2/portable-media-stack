@@ -80,6 +80,10 @@ if [ "$DRY_RUN" = true ]; then
   exit 0
 fi
 
+if [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+  ./scripts/write-funnel-traefik-config.sh
+fi
+
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
 
 if [ "$MODE" = "tailscale-funnel" ]; then

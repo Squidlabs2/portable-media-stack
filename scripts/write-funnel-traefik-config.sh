@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+set -a
+# shellcheck disable=SC1091
+source ./.env
+set +a
+
+normalize_path() {
+  local value="$1"
+  [ -n "$value" ] || value="/"
+  case "$value" in
+    /*) ;;
+    *) value="/$value" ;;
+  esac
+  value="${value%/}"
+  [ -n "$value" ] || value="/"
+  printf '%s\n' "$value"
+}
+
+if [ "${MODE:-tailnet-only}" != "tailscale-funnel" ] || [ "${FUNNEL_USE_PATHS:-false}" != "true" ] || [ "${INSTALL_TRAEFIK:-true}" != "true" ]; then
+  echo "Skipping Funnel Traefik config generation for current mode"
+  exit 0
+fi
+
+config_dir="${TRAEFIK_FUNNEL_CONFIG_DIR:-${CONFIG_ROOT:-./config}/traefik-funnel}"
+config_file="$config_dir/dynamic.yml"
+mkdir -p "$config_dir"
+
+radarr_path="$(normalize_path "${FUNNEL_RADARR_PATH:-/radarr}")"
+sonarr_path="$(normalize_path "${FUNNEL_SONARR_PATH:-/sonarr}")"
+
+cat > "$config_file" <<EOF
+http:
+  routers:
+    funnel-radarr:
+      entryPoints:
+        - funnel
+      rule: PathPrefix(\`${radarr_path}\`)
+      service: funnel-radarr
+      middlewares:
+        - funnel-radarr-strip
+    funnel-sonarr:
+      entryPoints:
+        - funnel
+      rule: PathPrefix(\`${sonarr_path}\`)
+      service: funnel-sonarr
+      middlewares:
+        - funnel-sonarr-strip
+  middlewares:
+    funnel-radarr-strip:
+      stripPrefix:
+        prefixes:
+          - ${radarr_path}
+        forceSlash: false
+    funnel-sonarr-strip:
+      stripPrefix:
+        prefixes:
+          - ${sonarr_path}
+        forceSlash: false
+  services:
+    funnel-radarr:
+      loadBalancer:
+        servers:
+          - url: http://radarr:7878
+    funnel-sonarr:
+      loadBalancer:
+        servers:
+          - url: http://sonarr:8989
+EOF
+
+echo "Wrote Funnel Traefik config to $config_file"
