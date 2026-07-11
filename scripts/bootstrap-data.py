@@ -423,9 +423,7 @@ def apply_data(input_path: Path, timeout_seconds: int):
     internal_prowlarr_url = env("TARGET_INTERNAL_PROWLARR_URL", f"http://prowlarr:9696{prowlarr_url_base}")
     internal_sonarr_url = env("TARGET_INTERNAL_SONARR_URL", f"http://sonarr:8989{sonarr_url_base}")
     internal_radarr_url = env("TARGET_INTERNAL_RADARR_URL", f"http://radarr:7878{radarr_url_base}")
-    sabnzbd_host = env("TARGET_INTERNAL_SABNZBD_HOST", "")
-    if not sabnzbd_host:
-        sabnzbd_host = read_ini_value(str(sabnzbd_config), "host_whitelist").split(",", 1)[0].strip() or "sabnzbd"
+    sabnzbd_host = env("TARGET_INTERNAL_SABNZBD_HOST", "sabnzbd")
     sabnzbd_port = int(env('TARGET_INTERNAL_SABNZBD_PORT', '8080'))
 
     wait_for_api(f"{prowlarr_url}/api/v1/system/status", prowlarr_key, "Prowlarr", timeout_seconds)
