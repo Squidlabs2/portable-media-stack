@@ -19,6 +19,17 @@ if [ ! -f "$ENV_FILE" ]; then
   cp "$ENV_TEMPLATE" "$ENV_FILE"
 fi
 
+legacy_or_empty() {
+  local value="$1"
+  shift
+  [ -z "$value" ] && return 0
+  local candidate
+  for candidate in "$@"; do
+    [ "$value" = "$candidate" ] && return 0
+  done
+  return 1
+}
+
 set_kv() {
   local key="$1"
   local value="$2"
@@ -46,6 +57,28 @@ PY
 get_value() {
   local key="$1"
   grep -E "^${key}=" "$ENV_FILE" | head -n1 | cut -d= -f2-
+}
+
+apply_path_defaults() {
+  local home_dir config_default downloads_default movies_default tv_default
+  home_dir="${HOME:-$ROOT_DIR}"
+  config_default="$ROOT_DIR/config"
+  downloads_default="$home_dir/downloads"
+  movies_default="$home_dir/media/movies"
+  tv_default="$home_dir/media/tv"
+
+  if legacy_or_empty "$(get_value CONFIG_ROOT)" "./config"; then
+    set_kv CONFIG_ROOT "$config_default"
+  fi
+  if legacy_or_empty "$(get_value DOWNLOADS_PATH)" "/srv/downloads"; then
+    set_kv DOWNLOADS_PATH "$downloads_default"
+  fi
+  if legacy_or_empty "$(get_value MOVIES_PATH)" "/srv/media/movies"; then
+    set_kv MOVIES_PATH "$movies_default"
+  fi
+  if legacy_or_empty "$(get_value TV_PATH)" "/srv/media/tv"; then
+    set_kv TV_PATH "$tv_default"
+  fi
 }
 
 prompt_value() {
@@ -90,6 +123,8 @@ apply_mode_defaults() {
       ;;
   esac
 }
+
+apply_path_defaults
 
 prompt_value MODE "Deployment mode (tailnet-only|tailscale-funnel|traefik-private-dns|traefik-public-dns)"
 apply_mode_defaults

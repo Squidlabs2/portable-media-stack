@@ -149,11 +149,11 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 
 2. Log out and back in after host prep if you want to use Docker without `sudo`.
 3. During host prep, you can paste a Tailscale auth key when prompted to join automatically, or press Enter to skip and run `sudo tailscale up` manually afterward.
-4. During installer prompts, set your persistent paths, for example:
-   - `CONFIG_ROOT=/srv/media-stack/config`
-   - `DOWNLOADS_PATH=/srv/media-stack/downloads`
-   - `MOVIES_PATH=/srv/media-stack/media/movies`
-   - `TV_PATH=/srv/media-stack/media/tv`
+4. During installer prompts, the default persistent paths now stay under the current user's home directory, for example:
+   - `CONFIG_ROOT=$HOME/portable-media-stack/config`
+   - `DOWNLOADS_PATH=$HOME/downloads`
+   - `MOVIES_PATH=$HOME/media/movies`
+   - `TV_PATH=$HOME/media/tv`
 5. If you exported bootstrap data from another machine, enable:
    - `AUTO_APPLY_BOOTSTRAP_DATA=true`
    - `BOOTSTRAP_DATA_FILE=./bootstrap-data/local/bootstrap-data.json`
