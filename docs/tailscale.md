@@ -1,0 +1,19 @@
+# Tailscale Notes
+
+This stack assumes Tailscale runs on the host, not inside Docker.
+
+Why:
+- simpler operational model
+- easier host access to published app ports
+- avoids mixing overlay routing into the application stack
+
+Supported access patterns:
+- `tailnet-only`: apps are reachable only from devices on your tailnet
+- `tailscale-funnel`: selected apps are still hosted on the tailnet machine but are published publicly through Tailscale Funnel without router port forwarding
+
+Notes for Funnel mode:
+- the host still stays on Tailscale
+- SSH remains host-level and unchanged
+- public URLs use your tailnet's `*.ts.net` naming
+- supported public Funnel ports are 443, 8443, and 10000
+- the installer can ask whether to auto-configure Funnel for Radarr, Sonarr, and Jellyfin

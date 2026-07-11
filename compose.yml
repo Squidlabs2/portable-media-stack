@@ -1,0 +1,111 @@
+name: ${STACK_NAME:-portable-media-stack}
+
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: ${STACK_NAME:-portable-media-stack}_jellyfin
+    restart: unless-stopped
+    networks:
+      - media
+    ports:
+      - "${JELLYFIN_PORT:-8096}:8096"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${JELLYFIN_CONFIG:-./config/jellyfin}:/config
+      - ${MOVIES_PATH:-/srv/media/movies}:/data/movies
+      - ${TV_PATH:-/srv/media/tv}:/data/tv
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: ${STACK_NAME:-portable-media-stack}_radarr
+    restart: unless-stopped
+    networks:
+      - media
+    ports:
+      - "${RADARR_PORT:-7878}:7878"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${RADARR_CONFIG:-./config/radarr}:/config
+      - ${MOVIES_PATH:-/srv/media/movies}:/movies
+      - ${DOWNLOADS_PATH:-/srv/downloads}:/downloads
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: ${STACK_NAME:-portable-media-stack}_sonarr
+    restart: unless-stopped
+    networks:
+      - media
+    ports:
+      - "${SONARR_PORT:-8989}:8989"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${SONARR_CONFIG:-./config/sonarr}:/config
+      - ${TV_PATH:-/srv/media/tv}:/tv
+      - ${DOWNLOADS_PATH:-/srv/downloads}:/downloads
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: ${STACK_NAME:-portable-media-stack}_prowlarr
+    restart: unless-stopped
+    networks:
+      - media
+      - egress
+    ports:
+      - "${PROWLARR_PORT:-9696}:9696"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${PROWLARR_CONFIG:-./config/prowlarr}:/config
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: ${STACK_NAME:-portable-media-stack}_sabnzbd
+    restart: unless-stopped
+    networks:
+      - media
+      - egress
+    ports:
+      - "${SABNZBD_PORT:-8080}:8080"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${SABNZBD_CONFIG:-./config/sabnzbd}:/config
+      - ${DOWNLOADS_PATH:-/srv/downloads}:/downloads
+
+  nzbdav:
+    profiles: ["nzbdav"]
+    image: ghcr.io/nzbdav-dev/nzbdav:latest
+    container_name: ${STACK_NAME:-portable-media-stack}_nzbdav
+    restart: unless-stopped
+    networks:
+      - media
+    ports:
+      - "${NZBDAV_PORT:-3000}:3000"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${NZBDAV_CONFIG:-./config/nzbdav}:/config
+      - ${DOWNLOADS_PATH:-/srv/downloads}:/downloads
+
+networks:
+  media:
+    name: ${STACK_NAME:-portable-media-stack}_${MEDIA_NETWORK:-media}
+    internal: true
+  egress:
+    name: ${STACK_NAME:-portable-media-stack}_${EGRESS_NETWORK:-egress}
+    driver: bridge

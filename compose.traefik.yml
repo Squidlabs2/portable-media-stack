@@ -1,0 +1,76 @@
+services:
+  jellyfin:
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.rule=Host(`${JELLYFIN_HOST}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls=true"
+      - "traefik.http.routers.jellyfin.tls.certresolver=${TRAEFIK_CERTRESOLVER}"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      - "traefik.docker.network=${PROXY_NETWORK}"
+
+  radarr:
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.rule=Host(`${RADARR_HOST}`)"
+      - "traefik.http.routers.radarr.entrypoints=websecure"
+      - "traefik.http.routers.radarr.tls=true"
+      - "traefik.http.routers.radarr.tls.certresolver=${TRAEFIK_CERTRESOLVER}"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "traefik.docker.network=${PROXY_NETWORK}"
+
+  sonarr:
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.rule=Host(`${SONARR_HOST}`)"
+      - "traefik.http.routers.sonarr.entrypoints=websecure"
+      - "traefik.http.routers.sonarr.tls=true"
+      - "traefik.http.routers.sonarr.tls.certresolver=${TRAEFIK_CERTRESOLVER}"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.docker.network=${PROXY_NETWORK}"
+
+  prowlarr:
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prowlarr.rule=Host(`${PROWLARR_HOST}`)"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.tls=true"
+      - "traefik.http.routers.prowlarr.tls.certresolver=${TRAEFIK_CERTRESOLVER}"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      - "traefik.docker.network=${PROXY_NETWORK}"
+
+  sabnzbd:
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sabnzbd.rule=Host(`${SABNZBD_HOST}`)"
+      - "traefik.http.routers.sabnzbd.entrypoints=websecure"
+      - "traefik.http.routers.sabnzbd.tls=true"
+      - "traefik.http.routers.sabnzbd.tls.certresolver=${TRAEFIK_CERTRESOLVER}"
+      - "traefik.http.services.sabnzbd.loadbalancer.server.port=8080"
+      - "traefik.docker.network=${PROXY_NETWORK}"
+
+  nzbdav:
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nzbdav.rule=Host(`${NZBDAV_HOST}`)"
+      - "traefik.http.routers.nzbdav.entrypoints=websecure"
+      - "traefik.http.routers.nzbdav.tls=true"
+      - "traefik.http.routers.nzbdav.tls.certresolver=${TRAEFIK_CERTRESOLVER}"
+      - "traefik.http.services.nzbdav.loadbalancer.server.port=3000"
+      - "traefik.docker.network=${PROXY_NETWORK}"
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK:-proxy}
