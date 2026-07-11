@@ -143,6 +143,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `scripts/export-bootstrap-data.sh` - exports reusable indexer/downloader seed data from a live stack
 - `scripts/fetch-bootstrap-data.sh` - pulls the latest saved bootstrap artifact from another machine over SSH
 - `scripts/apply-bootstrap-data.sh` - applies reusable indexer/downloader seed data to a fresh install
+- `scripts/configure-sab-paths.sh` - normalizes SABnzbd download directories to the mounted `/downloads` path and restarts SAB if a legacy default is detected
 - `scripts/preflight.sh` - validates prerequisites and prepares Traefik ACME storage
 - `scripts/create-networks.sh` - creates external Docker networks when needed
 - `scripts/update.sh` - pulls repo and refreshes containers

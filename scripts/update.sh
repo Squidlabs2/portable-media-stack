@@ -35,5 +35,6 @@ fi
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" pull
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
+./scripts/configure-sab-paths.sh
 
 echo "Update complete"

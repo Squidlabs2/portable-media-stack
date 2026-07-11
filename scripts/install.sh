@@ -103,6 +103,7 @@ if [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ]
 fi
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
+./scripts/configure-sab-paths.sh
 
 if [ "$MODE" = "tailscale-funnel" ]; then
   ./scripts/configure-arr-url-bases.sh
