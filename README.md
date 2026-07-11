@@ -18,6 +18,31 @@ Recommended install:
 bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh)
 ```
 
+Fresh Debian host prep + install:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host
+```
+
+That Debian host prep path will:
+- run `apt-get update`
+- run `apt-get upgrade -y` by default
+- install `curl`, `git`, `bash`, `python3`, and apt/GPG prerequisites
+- install Docker Engine and the Docker Compose plugin
+- install Tailscale and start `tailscaled`
+- add the current non-root user to the `docker` group
+- then continue into the normal stack installer
+
+Useful host-prep variants:
+
+```bash
+# prepare host but skip full apt upgrade
+bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host --skip-upgrade
+
+# preview host prep commands without changing the machine
+bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host --dry-run
+```
+
 By default this installs the repo under `${HOME}/portable-media-stack`, so it automatically uses the current user on the machine rather than a hardcoded home path.
 
 If you want it under a `containers` workspace, use:
@@ -31,6 +56,13 @@ Safer/manual install:
 ```bash
 git clone git@github.com:Squidlabs2/portable-media-stack.git
 cd portable-media-stack
+./scripts/install.sh
+```
+
+Manual two-step fresh Debian flow:
+
+```bash
+./scripts/prepare-host-debian.sh
 ./scripts/install.sh
 ```
 
@@ -86,6 +118,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `compose.traefik-external.yml` - external proxy network for an existing Traefik host
 - `.env.example` - template for local `.env`
 - `scripts/bootstrap.sh` - one-liner entrypoint
+- `scripts/prepare-host-debian.sh` - optional Debian host prep for Docker, Compose, and Tailscale
 - `scripts/install.sh` - orchestrates setup
 - `scripts/configure.sh` - generates `.env`
 - `scripts/configure-funnel.sh` - applies Tailscale Funnel config from `.env`
@@ -101,9 +134,29 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `.env` is created locally during install.
 - `bootstrap-data/local/bootstrap-data.json` is local-only and ignored by git because it can contain API keys and indexer credentials.
 - `bootstrap.sh` is intentionally small; all real logic lives in versioned repo scripts.
+- `scripts/prepare-host-debian.sh` is Debian-only and optional; use it on fresh machines that still need Docker/Tailscale installed.
 - Tailscale stays on the host; SSH and other host access remain independent of this stack.
 - For public Radarr/Sonarr exposure, use strong app credentials.
 - Tailscale Funnel uses your tailnet's `*.ts.net` naming, not your own custom public CNAMEs.
+
+## Fresh Debian checklist
+
+1. Run the bootstrap with host prep if the machine does not already have Docker and Tailscale:
+
+   ```bash
+   INSTALL_DIR="${HOME}/containers/portable-media-stack" bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host
+   ```
+
+2. Log out and back in after host prep if you want to use Docker without `sudo`.
+3. During host prep, you can paste a Tailscale auth key when prompted to join automatically, or press Enter to skip and run `sudo tailscale up` manually afterward.
+4. During installer prompts, set your persistent paths, for example:
+   - `CONFIG_ROOT=/srv/media-stack/config`
+   - `DOWNLOADS_PATH=/srv/media-stack/downloads`
+   - `MOVIES_PATH=/srv/media-stack/media/movies`
+   - `TV_PATH=/srv/media-stack/media/tv`
+5. If you exported bootstrap data from another machine, enable:
+   - `AUTO_APPLY_BOOTSTRAP_DATA=true`
+   - `BOOTSTRAP_DATA_FILE=./bootstrap-data/local/bootstrap-data.json`
 
 ## Automating fresh Arr setup from your current stack
 

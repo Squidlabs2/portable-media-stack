@@ -4,6 +4,9 @@ set -euo pipefail
 REPO_URL="${REPO_URL:-https://github.com/Squidlabs2/portable-media-stack.git}"
 INSTALL_DIR="${INSTALL_DIR:-${HOME}/portable-media-stack}"
 BRANCH="${BRANCH:-main}"
+PREPARE_HOST=false
+PREPARE_HOST_ARGS=()
+INSTALL_ARGS=()
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -16,6 +19,35 @@ need_cmd git
 need_cmd bash
 need_cmd curl
 
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --prepare-host)
+      PREPARE_HOST=true
+      ;;
+    --skip-upgrade)
+      PREPARE_HOST_ARGS+=("$1")
+      ;;
+    --dry-run)
+      PREPARE_HOST_ARGS+=("$1")
+      INSTALL_ARGS+=("$1")
+      ;;
+    --tailscale-auth-key|--tailscale-extra-args)
+      PREPARE_HOST=true
+      PREPARE_HOST_ARGS+=("$1")
+      shift
+      [ $# -gt 0 ] || {
+        echo "Missing value for host prep argument" >&2
+        exit 1
+      }
+      PREPARE_HOST_ARGS+=("$1")
+      ;;
+    *)
+      INSTALL_ARGS+=("$1")
+      ;;
+  esac
+  shift
+done
+
 if [ ! -d "$INSTALL_DIR/.git" ]; then
   echo "Cloning $REPO_URL into $INSTALL_DIR"
   git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
@@ -27,4 +59,9 @@ else
 fi
 
 cd "$INSTALL_DIR"
-exec ./scripts/install.sh "$@"
+
+if [ "$PREPARE_HOST" = true ]; then
+  ./scripts/prepare-host-debian.sh "${PREPARE_HOST_ARGS[@]}"
+fi
+
+exec ./scripts/install.sh "${INSTALL_ARGS[@]}"
