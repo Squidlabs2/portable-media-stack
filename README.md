@@ -1,6 +1,6 @@
 # Portable Media Stack
 
-Portable Docker Compose stack for Jellyfin, Radarr, Sonarr, Prowlarr, optional SABnzbd, and optional NZBDAV.
+Portable Docker Compose stack for Jellyfin, Radarr, Sonarr, Prowlarr, NZBDAV, and optional legacy SABnzbd.
 
 Goals:
 - easy to deploy on multiple machines
@@ -114,8 +114,16 @@ Path-based Funnel URLs look like:
 - `https://<device>.<tailnet>.ts.net/sonarr`
 
 The installer also updates Radarr and Sonarr `UrlBase` automatically when path-based Funnel mode is enabled.
-For Arr apps, the recommended path-based Funnel architecture is bundled Traefik listening on a local high port behind Funnel; Funnel points `/radarr` and `/sonarr` at Traefik, and Traefik strips the prefix before proxying upstream.
+For Arr apps, the recommended path-based Funnel architecture is bundled Traefik listening on a local high port behind Funnel; Funnel points `/radarr` and `/sonarr` at Traefik, and Traefik preserves those path prefixes for the UrlBase-aware Arr apps.
 In Funnel mode, the bundled Traefik front door now uses a generated file-provider config rather than Traefik's Docker provider.
+
+In the verified NZBDAV setup, keep NZBDAV private and expose only Radarr/Sonarr through Funnel paths. The working public URL shape is:
+- `https://<device>.<tailnet>.ts.net/radarr`
+- `https://<device>.<tailnet>.ts.net/sonarr`
+
+For the current test machine this resolved as:
+- `https://ethan.wolverine-crocodile.ts.net/radarr`
+- `https://ethan.wolverine-crocodile.ts.net/sonarr`
 
 ## Traefik options
 
@@ -133,6 +141,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `compose.funnel-traefik.yml` - Traefik path-routing labels for Funnel mode
 - `compose.funnel-traefik-bundled.yml` - bundled Traefik service bound to a local high port for Funnel mode
 - `.env.example` - template for local `.env`
+- `docs/nzbdav.md` - NZBDAV-specific setup, privacy, and path notes
 - `scripts/bootstrap.sh` - one-liner entrypoint
 - `scripts/prepare-host-debian.sh` - optional Debian host prep for Docker, Compose, and Tailscale
 - `scripts/install.sh` - orchestrates setup
@@ -144,6 +153,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `scripts/fetch-bootstrap-data.sh` - pulls the latest saved bootstrap artifact from another machine over SSH
 - `scripts/apply-bootstrap-data.sh` - applies reusable indexer/downloader seed data to a fresh install
 - `scripts/configure-sab-paths.sh` - normalizes SABnzbd download directories to the mounted `/downloads` path and restarts SAB if a legacy default is detected
+- `scripts/configure-nzbdav-paths.sh` - creates NZBDAV completed category directories under the shared `/downloads` mount
 - `scripts/preflight.sh` - validates prerequisites and prepares Traefik ACME storage
 - `scripts/create-networks.sh` - creates external Docker networks when needed
 - `scripts/update.sh` - pulls repo and refreshes containers
@@ -159,6 +169,9 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - Tailscale stays on the host; SSH and other host access remain independent of this stack.
 - For public Radarr/Sonarr exposure, use strong app credentials.
 - Tailscale Funnel uses your tailnet's `*.ts.net` naming, not your own custom public CNAMEs.
+- With NZBDAV enabled, Sonarr and Radarr still use a SAB-compatible download-client integration, but the client host should be `nzbdav` on port `3000`.
+- Sonarr's library root folder inside the container is `/tv`; Radarr's library root folder is `/movies`.
+- NZBDAV completed downloads live under `/downloads/nzbdav-completed/<category>` inside the containers, backed by `${DOWNLOADS_PATH}/nzbdav-completed/<category>` on the host.
 
 ## Fresh Debian checklist
 

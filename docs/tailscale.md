@@ -17,3 +17,21 @@ Notes for Funnel mode:
 - public URLs use your tailnet's `*.ts.net` naming
 - supported public Funnel ports are 443, 8443, and 10000
 - the installer can ask whether to auto-configure Funnel for Radarr, Sonarr, and Jellyfin
+- for path-based Radarr/Sonarr, keep bundled Traefik on the local high port and point Funnel paths at Traefik, not directly at the Arr containers
+- expose only the services you intend to publish; the verified NZBDAV setup keeps NZBDAV private and publishes only `/radarr` and `/sonarr`
+
+Verified public URL shape:
+
+```text
+https://<device>.<tailnet>.ts.net/radarr
+https://<device>.<tailnet>.ts.net/sonarr
+```
+
+The current test machine's working Funnel hostname was:
+
+```text
+https://ethan.wolverine-crocodile.ts.net/radarr
+https://ethan.wolverine-crocodile.ts.net/sonarr
+```
+
+If Funnel status shows multiple hostnames, test the specific hostname printed as the "Available on the internet" URL after rerunning `./scripts/configure-funnel.sh`. Old names can remain visible in status but fail externally.

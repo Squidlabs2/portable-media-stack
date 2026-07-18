@@ -11,6 +11,7 @@ What the export contains:
 - one Radarr Prowlarr application template
 - Sonarr SAB-compatible download client template
 - Radarr SAB-compatible download client template
+- optional Usenet provider details for configuring NZBDAV on the target stack
 
 Why it is local-only:
 - it can contain API keys and indexer credentials
@@ -24,3 +25,5 @@ Typical workflow:
 
 You can also apply it manually after install:
 - `./scripts/apply-bootstrap-data.sh`
+
+When `ENABLE_NZBDAV=true`, the apply flow configures NZBDAV and then points the Sonarr/Radarr SAB-compatible download clients at `nzbdav:3000`. The Arr UI may still call the client `SABnzbd`; that is expected because NZBDAV speaks the SAB-compatible API.
