@@ -25,7 +25,7 @@ funnel_expected_summary() {
       printf ', Jellyfin on port %s' "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}"
     fi
     if [ "${FUNNEL_SEERR:-false}" = "true" ]; then
-      printf ', Seerr on port %s' "${FUNNEL_SEERR_PUBLIC_PORT:-10000}"
+      printf ', Seerr at %s' "${FUNNEL_SEERR_PATH:-/seerr}"
     fi
     printf '\n'
   else

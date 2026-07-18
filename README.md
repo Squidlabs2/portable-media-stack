@@ -103,9 +103,10 @@ Recommended defaults for your use case:
 - `FUNNEL_RADARR_PUBLIC_PORT=443`
 - `FUNNEL_SONARR_PUBLIC_PORT=443`
 - `FUNNEL_JELLYFIN_PUBLIC_PORT=10000`
-- `FUNNEL_SEERR_PUBLIC_PORT=10000`
+- `FUNNEL_SEERR_PUBLIC_PORT=443`
 - `FUNNEL_RADARR_PATH=/radarr`
 - `FUNNEL_SONARR_PATH=/sonarr`
+- `FUNNEL_SEERR_PATH=/seerr`
 - `INSTALL_TRAEFIK=true`
 - `TRAEFIK_FUNNEL_PORT=8088`
 
@@ -115,21 +116,23 @@ When Funnel auto-config is enabled, the installer now prints the expected public
 Path-based Funnel URLs look like:
 - `https://<device>.<tailnet>.ts.net/radarr`
 - `https://<device>.<tailnet>.ts.net/sonarr`
+- `https://<device>.<tailnet>.ts.net/seerr`
 
 The installer also updates Radarr and Sonarr `UrlBase` automatically when path-based Funnel mode is enabled.
 For Arr apps, the recommended path-based Funnel architecture is bundled Traefik listening on a local high port behind Funnel; Funnel points `/radarr` and `/sonarr` at Traefik, and Traefik preserves those path prefixes for the UrlBase-aware Arr apps.
 In Funnel mode, the bundled Traefik front door now uses a generated file-provider config rather than Traefik's Docker provider.
 
-In the verified NZBDAV setup, keep NZBDAV private and expose only Radarr/Sonarr through Funnel paths. The working public URL shape is:
+In the verified NZBDAV setup, keep NZBDAV private and expose Radarr/Sonarr/Seerr through Funnel paths. The working public URL shape is:
 - `https://<device>.<tailnet>.ts.net/radarr`
 - `https://<device>.<tailnet>.ts.net/sonarr`
+- `https://<device>.<tailnet>.ts.net/seerr`
 
-Seerr is the public-friendly request portal. In Funnel mode it is exposed on its own Funnel port by default:
-- `https://<device>.<tailnet>.ts.net:10000`
+Seerr is the public-friendly request portal. In path-based Funnel mode it uses `SEERR_BASE_URL=/seerr` and is served behind the same bundled Traefik/Funnel path router as Radarr and Sonarr.
 
 For the current test machine this resolved as:
 - `https://ethan.wolverine-crocodile.ts.net/radarr`
 - `https://ethan.wolverine-crocodile.ts.net/sonarr`
+- `https://ethan.wolverine-crocodile.ts.net/seerr`
 
 ## Traefik options
 

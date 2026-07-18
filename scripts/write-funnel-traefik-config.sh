@@ -32,6 +32,7 @@ mkdir -p "$config_dir"
 
 radarr_path="$(normalize_path "${FUNNEL_RADARR_PATH:-/radarr}")"
 sonarr_path="$(normalize_path "${FUNNEL_SONARR_PATH:-/sonarr}")"
+seerr_path="$(normalize_path "${FUNNEL_SEERR_PATH:-/seerr}")"
 
 cat > "$config_file" <<EOF
 http:
@@ -46,6 +47,11 @@ http:
         - funnel
       rule: PathPrefix(\`${sonarr_path}\`)
       service: funnel-sonarr
+    funnel-seerr:
+      entryPoints:
+        - funnel
+      rule: PathPrefix(\`${seerr_path}\`)
+      service: funnel-seerr
   services:
     funnel-radarr:
       loadBalancer:
@@ -55,6 +61,10 @@ http:
       loadBalancer:
         servers:
           - url: http://sonarr:8989
+    funnel-seerr:
+      loadBalancer:
+        servers:
+          - url: http://seerr:5055
 EOF
 
 echo "Wrote Funnel Traefik config to $config_file"

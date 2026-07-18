@@ -7,6 +7,10 @@ services:
     networks:
       - proxy
 
+  seerr:
+    networks:
+      - proxy
+
 networks:
   proxy:
     name: ${PROXY_NETWORK:-proxy}

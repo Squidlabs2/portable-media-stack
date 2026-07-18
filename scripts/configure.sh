@@ -182,10 +182,12 @@ apply_mode_defaults() {
       set_kv FUNNEL_RADARR_PUBLIC_PORT 443
       set_kv FUNNEL_SONARR_PUBLIC_PORT 443
       set_kv FUNNEL_JELLYFIN_PUBLIC_PORT 10000
-      set_kv FUNNEL_SEERR_PUBLIC_PORT 10000
+      set_kv FUNNEL_SEERR_PUBLIC_PORT 443
       set_kv FUNNEL_RADARR_PATH /radarr
       set_kv FUNNEL_SONARR_PATH /sonarr
       set_kv FUNNEL_JELLYFIN_PATH /jellyfin
+      set_kv FUNNEL_SEERR_PATH /seerr
+      set_kv SEERR_BASE_URL /seerr
       set_kv TRAEFIK_FUNNEL_PORT 8088
       set_kv TRAEFIK_FUNNEL_CONFIG_DIR "${config_root}/traefik-funnel"
       ;;
@@ -248,7 +250,7 @@ if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
   prompt_value FUNNEL_RADARR "Expose Radarr through Funnel (recommended: true)"
   prompt_value FUNNEL_SONARR "Expose Sonarr through Funnel (recommended: true)"
   prompt_value FUNNEL_JELLYFIN "Expose Jellyfin through Funnel (recommended: false)"
-  prompt_value FUNNEL_SEERR "Expose Seerr through Funnel on port 10000 (recommended: true)"
+  prompt_value FUNNEL_SEERR "Expose Seerr through Funnel at /seerr (recommended: true)"
   if [ "$(get_value FUNNEL_USE_PATHS)" = "true" ]; then
     if [ "$(get_value INSTALL_TRAEFIK)" = "true" ]; then
       prompt_value TRAEFIK_FUNNEL_PORT "Local Traefik port used behind Funnel (recommended: 8088)"
@@ -257,11 +259,13 @@ if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
     set_kv FUNNEL_SONARR_PUBLIC_PORT 443
     prompt_funnel_path FUNNEL_RADARR_PATH "Public Funnel path for Radarr (recommended: /radarr)"
     prompt_funnel_path FUNNEL_SONARR_PATH "Public Funnel path for Sonarr (recommended: /sonarr)"
+    if [ "$(get_value FUNNEL_SEERR)" = "true" ]; then
+      set_kv FUNNEL_SEERR_PUBLIC_PORT 443
+      prompt_funnel_path FUNNEL_SEERR_PATH "Public Funnel path for Seerr (recommended: /seerr)"
+      set_kv SEERR_BASE_URL "$(get_value FUNNEL_SEERR_PATH)"
+    fi
     if [ "$(get_value FUNNEL_JELLYFIN)" = "true" ]; then
       prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000)"
-    fi
-    if [ "$(get_value FUNNEL_SEERR)" = "true" ]; then
-      prompt_value FUNNEL_SEERR_PUBLIC_PORT "Public Funnel port for Seerr (recommended: 10000)"
     fi
   else
     prompt_value FUNNEL_RADARR_PUBLIC_PORT "Public Funnel port for Radarr (recommended: 443)"

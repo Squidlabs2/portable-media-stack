@@ -81,7 +81,7 @@ if [ "${AUTO_CONFIGURE_FUNNEL:-false}" != "true" ]; then
   exit 0
 fi
 
-if [ "${FUNNEL_JELLYFIN:-false}" = "true" ] && [ "${FUNNEL_SEERR:-false}" = "true" ] && [ "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" = "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" ]; then
+if [ "${FUNNEL_USE_PATHS:-false}" != "true" ] && [ "${FUNNEL_JELLYFIN:-false}" = "true" ] && [ "${FUNNEL_SEERR:-false}" = "true" ] && [ "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" = "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" ]; then
   echo "Jellyfin and Seerr cannot share Funnel public port ${FUNNEL_SEERR_PUBLIC_PORT:-10000}. Disable one or choose a different allowed port." >&2
   exit 1
 fi
@@ -135,16 +135,20 @@ if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
     funnel_proxy_base="http://127.0.0.1:${TRAEFIK_FUNNEL_PORT:-8088}"
     run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "${funnel_proxy_base}$(normalize_path "${FUNNEL_RADARR_PATH:-/radarr}")" "radarr" "${FUNNEL_RADARR_PATH:-/radarr}"
     run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "${funnel_proxy_base}$(normalize_path "${FUNNEL_SONARR_PATH:-/sonarr}")" "sonarr" "${FUNNEL_SONARR_PATH:-/sonarr}"
+    run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-443}" "${funnel_proxy_base}$(normalize_path "${FUNNEL_SEERR_PATH:-/seerr}")" "seerr" "${FUNNEL_SEERR_PATH:-/seerr}"
   else
     run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr" "${FUNNEL_RADARR_PATH:-/radarr}"
     run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr" "${FUNNEL_SONARR_PATH:-/sonarr}"
+    run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-443}" "http://127.0.0.1:${SEERR_PORT:-5055}" "seerr" "${FUNNEL_SEERR_PATH:-/seerr}"
   fi
 else
   run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr"
   run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr"
 fi
 run_funnel "${FUNNEL_JELLYFIN:-false}" "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" "http://127.0.0.1:${JELLYFIN_PORT:-8096}" "jellyfin"
-run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" "http://127.0.0.1:${SEERR_PORT:-5055}" "seerr"
+if [ "${FUNNEL_USE_PATHS:-false}" != "true" ]; then
+  run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" "http://127.0.0.1:${SEERR_PORT:-5055}" "seerr"
+fi
 
 dns_name="$(tailscale status --json | python3 -c 'import sys,json; d=json.load(sys.stdin); print((d.get("Self",{}).get("DNSName","") or "").rstrip("."))')"
 
@@ -157,10 +161,13 @@ if [ -n "$dns_name" ]; then
   if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
     print_url_hint "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "Radarr" "$dns_name" "${FUNNEL_RADARR_PATH:-/radarr}"
     print_url_hint "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "Sonarr" "$dns_name" "${FUNNEL_SONARR_PATH:-/sonarr}"
+    print_url_hint "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-443}" "Seerr" "$dns_name" "${FUNNEL_SEERR_PATH:-/seerr}"
   else
     print_url_hint "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "Radarr" "$dns_name"
     print_url_hint "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "Sonarr" "$dns_name"
   fi
   print_url_hint "${FUNNEL_JELLYFIN:-false}" "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" "Jellyfin" "$dns_name"
-  print_url_hint "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" "Seerr" "$dns_name"
+  if [ "${FUNNEL_USE_PATHS:-false}" != "true" ]; then
+    print_url_hint "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" "Seerr" "$dns_name"
+  fi
 fi

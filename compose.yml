@@ -121,6 +121,7 @@ services:
       LOG_LEVEL: info
       TZ: ${TZ:-UTC}
       PORT: 5055
+      BASE_URL: ${SEERR_BASE_URL:-/seerr}
     volumes:
       - ${SEERR_CONFIG:-./config/seerr}:/app/config
 
