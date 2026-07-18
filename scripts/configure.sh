@@ -143,8 +143,9 @@ prompt_funnel_path() {
 }
 
 apply_mode_defaults() {
-  local mode
+  local mode config_root
   mode="$(get_value MODE)"
+  config_root="$(get_value CONFIG_ROOT)"
 
   case "$mode" in
     tailscale-funnel)
@@ -162,7 +163,7 @@ apply_mode_defaults() {
       set_kv FUNNEL_SONARR_PATH /sonarr
       set_kv FUNNEL_JELLYFIN_PATH /jellyfin
       set_kv TRAEFIK_FUNNEL_PORT 8088
-      set_kv TRAEFIK_FUNNEL_CONFIG_DIR ${CONFIG_ROOT}/traefik-funnel
+      set_kv TRAEFIK_FUNNEL_CONFIG_DIR "${config_root}/traefik-funnel"
       ;;
     traefik-private-dns|traefik-public-dns)
       set_kv INSTALL_TRAEFIK true
