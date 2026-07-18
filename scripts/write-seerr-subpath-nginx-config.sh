@@ -73,10 +73,12 @@ server {
         proxy_redirect /login https://\$host/\$app/login;
         proxy_set_header Accept-Encoding "";
         sub_filter_once off;
+        sub_filter_types *;
         sub_filter 'href="/"' 'href="/\$app"';
         sub_filter 'href="/login"' 'href="/\$app/login"';
         sub_filter 'href:"/"' 'href:"/\$app"';
         sub_filter '/_next' '/\$app/_next';
+        sub_filter '\\/\$app/_next' '\\/\$app\\/_next';
         sub_filter '/api/v1' '/\$app/api/v1';
         sub_filter '/login/plex/loading' '/\$app/login/plex/loading';
         sub_filter '/images/' '/\$app/images/';
