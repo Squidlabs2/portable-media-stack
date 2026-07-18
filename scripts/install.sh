@@ -123,6 +123,9 @@ fi
 prepare_seerr_config
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
+if [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ] && [ "${ENABLE_SEERR:-false}" = "true" ]; then
+  docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d --force-recreate seerr-web
+fi
 if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
   ./scripts/configure-sab-paths.sh
 fi
