@@ -62,6 +62,14 @@ set -a
 source ./.env
 set +a
 
+prepare_seerr_config() {
+  [ "${ENABLE_SEERR:-false}" = "true" ] || return 0
+  local seerr_config
+  seerr_config="${SEERR_CONFIG:-./config/seerr}"
+  mkdir -p "$seerr_config"
+  chown "${PUID:-1000}:${PGID:-1000}" "$seerr_config" 2>/dev/null || true
+}
+
 ./scripts/preflight.sh
 ./scripts/create-networks.sh
 
@@ -110,6 +118,8 @@ fi
 if [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
   ./scripts/write-funnel-traefik-config.sh
 fi
+
+prepare_seerr_config
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
 if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
