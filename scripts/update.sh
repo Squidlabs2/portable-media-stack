@@ -6,6 +6,8 @@ cd "$ROOT_DIR"
 
 git pull --ff-only
 
+./scripts/configure.sh --non-interactive
+
 set -a
 # shellcheck disable=SC1091
 source ./.env
@@ -56,6 +58,10 @@ if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
 fi
 if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   ./scripts/configure-nzbdav-paths.sh
+fi
+if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ]; then
+  ./scripts/configure-arr-url-bases.sh
+  ./scripts/configure-funnel.sh
 fi
 
 echo "Update complete"
