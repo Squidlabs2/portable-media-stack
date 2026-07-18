@@ -52,7 +52,7 @@ server {
         proxy_set_header X-Forwarded-Proto \$seerr_x_forwarded_proto;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_redirect http://\$host/ https://\$host/\$app/;
+        proxy_redirect ~^http://([^/]+)/(.*)\$ https://\$1/\$app/\$2;
         proxy_redirect ^ /\$app;
         proxy_redirect /setup /\$app/setup;
         proxy_redirect /login /\$app/login;
