@@ -53,9 +53,9 @@ server {
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_redirect ~^http://([^/]+)/(.*)\$ https://\$1/\$app/\$2;
-        proxy_redirect ^ /\$app;
-        proxy_redirect /setup /\$app/setup;
-        proxy_redirect /login /\$app/login;
+        proxy_redirect ^ https://\$host/\$app;
+        proxy_redirect /setup https://\$host/\$app/setup;
+        proxy_redirect /login https://\$host/\$app/login;
         proxy_set_header Accept-Encoding "";
         sub_filter_once off;
         sub_filter_types *;
