@@ -128,6 +128,9 @@ if [ "${FUNNEL_JELLYFIN:-false}" = "true" ]; then
 fi
 if [ "${FUNNEL_SEERR:-false}" = "true" ]; then
   clear_funnel_port "${FUNNEL_SEERR_PUBLIC_PORT:-10000}"
+  if [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${FUNNEL_JELLYFIN:-false}" != "true" ] && [ "${FUNNEL_SEERR_PUBLIC_PORT:-443}" != "10000" ]; then
+    clear_funnel_port 10000
+  fi
 fi
 
 if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then

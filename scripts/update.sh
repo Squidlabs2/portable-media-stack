@@ -46,6 +46,7 @@ if [ "${ENABLE_SEERR:-false}" = "true" ]; then
 fi
 
 if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+  ./scripts/write-seerr-subpath-nginx-config.sh
   ./scripts/write-funnel-traefik-config.sh
 fi
 

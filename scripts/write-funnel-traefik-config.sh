@@ -64,7 +64,7 @@ http:
     funnel-seerr:
       loadBalancer:
         servers:
-          - url: http://seerr:5055
+          - url: http://seerr-web:80
 EOF
 
 echo "Wrote Funnel Traefik config to $config_file"

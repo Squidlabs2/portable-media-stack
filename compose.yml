@@ -121,9 +121,20 @@ services:
       LOG_LEVEL: info
       TZ: ${TZ:-UTC}
       PORT: 5055
-      BASE_URL: ${SEERR_BASE_URL:-/seerr}
     volumes:
       - ${SEERR_CONFIG:-./config/seerr}:/app/config
+
+  seerr-web:
+    profiles: ["seerr"]
+    image: nginx:1.27-alpine
+    container_name: ${STACK_NAME:-portable-media-stack}_seerr_web
+    restart: unless-stopped
+    depends_on:
+      - seerr
+    networks:
+      - media
+    volumes:
+      - ${SEERR_WEB_CONFIG:-./config/seerr-web/nginx.conf}:/etc/nginx/conf.d/default.conf:ro
 
 networks:
   media:

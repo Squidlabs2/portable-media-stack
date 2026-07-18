@@ -28,7 +28,7 @@ https://<device>.<tailnet>.ts.net/sonarr
 https://<device>.<tailnet>.ts.net/seerr
 ```
 
-Seerr uses `/seerr` by default and the container receives `BASE_URL=/seerr` so generated links and assets stay path-aware. Keep Jellyfin disabled on Funnel or move it to another allowed Funnel port if you intentionally expose it too.
+Seerr uses `/seerr` by default. Seerr does not natively support a URL base like Radarr/Sonarr, so the stack generates a small Nginx subpath proxy that rewrites Seerr's root-based links under `/seerr`. Keep Jellyfin disabled on Funnel or move it to another allowed Funnel port if you intentionally expose it too.
 
 The current test machine's working Funnel hostname was:
 

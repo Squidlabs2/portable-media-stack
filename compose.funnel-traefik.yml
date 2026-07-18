@@ -7,7 +7,7 @@ services:
     networks:
       - proxy
 
-  seerr:
+  seerr-web:
     networks:
       - proxy
 

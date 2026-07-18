@@ -187,7 +187,6 @@ apply_mode_defaults() {
       set_kv FUNNEL_SONARR_PATH /sonarr
       set_kv FUNNEL_JELLYFIN_PATH /jellyfin
       set_kv FUNNEL_SEERR_PATH /seerr
-      set_kv SEERR_BASE_URL /seerr
       set_kv TRAEFIK_FUNNEL_PORT 8088
       set_kv TRAEFIK_FUNNEL_CONFIG_DIR "${config_root}/traefik-funnel"
       ;;
@@ -262,7 +261,6 @@ if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
     if [ "$(get_value FUNNEL_SEERR)" = "true" ]; then
       set_kv FUNNEL_SEERR_PUBLIC_PORT 443
       prompt_funnel_path FUNNEL_SEERR_PATH "Public Funnel path for Seerr (recommended: /seerr)"
-      set_kv SEERR_BASE_URL "$(get_value FUNNEL_SEERR_PATH)"
     fi
     if [ "$(get_value FUNNEL_JELLYFIN)" = "true" ]; then
       prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000)"

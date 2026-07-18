@@ -127,7 +127,7 @@ In the verified NZBDAV setup, keep NZBDAV private and expose Radarr/Sonarr/Seerr
 - `https://<device>.<tailnet>.ts.net/sonarr`
 - `https://<device>.<tailnet>.ts.net/seerr`
 
-Seerr is the public-friendly request portal. In path-based Funnel mode it uses `SEERR_BASE_URL=/seerr` and is served behind the same bundled Traefik/Funnel path router as Radarr and Sonarr.
+Seerr is the public-friendly request portal. Since Seerr does not natively support a URL base like Radarr/Sonarr, path-based Funnel mode serves `/seerr` through a small generated Nginx subpath proxy behind the same bundled Traefik/Funnel path router.
 
 For the current test machine this resolved as:
 - `https://ethan.wolverine-crocodile.ts.net/radarr`
