@@ -128,9 +128,7 @@ if [ "${FUNNEL_JELLYFIN:-false}" = "true" ]; then
 fi
 if [ "${FUNNEL_SEERR:-false}" = "true" ]; then
   clear_funnel_port "${FUNNEL_SEERR_PUBLIC_PORT:-10000}"
-  if [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${FUNNEL_JELLYFIN:-false}" != "true" ] && [ "${FUNNEL_SEERR_PUBLIC_PORT:-443}" != "10000" ]; then
-    clear_funnel_port 10000
-  fi
+  clear_funnel_port "${FUNNEL_SEERR_FALLBACK_PUBLIC_PORT:-10000}"
 fi
 
 if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
@@ -153,6 +151,8 @@ fi
 run_funnel "${FUNNEL_JELLYFIN:-false}" "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" "http://127.0.0.1:${JELLYFIN_PORT:-8096}" "jellyfin"
 if [ "${FUNNEL_USE_PATHS:-false}" != "true" ]; then
   run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" "http://127.0.0.1:${SEERR_PORT:-5055}" "seerr"
+else
+  run_funnel "${FUNNEL_SEERR_FALLBACK:-true}" "${FUNNEL_SEERR_FALLBACK_PUBLIC_PORT:-10000}" "http://127.0.0.1:${SEERR_PORT:-5055}" "seerr fallback"
 fi
 
 dns_name="$(tailscale status --json | python3 -c 'import sys,json; d=json.load(sys.stdin); print((d.get("Self",{}).get("DNSName","") or "").rstrip("."))')"
