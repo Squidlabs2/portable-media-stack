@@ -32,6 +32,11 @@ seerr_path="$(normalize_path "${FUNNEL_SEERR_PATH:-/seerr}")"
 mkdir -p "$config_dir"
 
 cat > "$config_file" <<EOF
+map \$http_x_forwarded_proto \$seerr_x_forwarded_proto {
+    default \$http_x_forwarded_proto;
+    "" \$scheme;
+}
+
 server {
     listen 80;
     server_name _;
@@ -44,7 +49,7 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Proto \$seerr_x_forwarded_proto;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_redirect ^ /\$app;
