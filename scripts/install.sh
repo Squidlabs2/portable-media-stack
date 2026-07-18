@@ -109,6 +109,9 @@ docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
 if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
   ./scripts/configure-sab-paths.sh
 fi
+if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
+  ./scripts/configure-nzbdav-paths.sh
+fi
 
 if [ "$MODE" = "tailscale-funnel" ]; then
   ./scripts/configure-arr-url-bases.sh
