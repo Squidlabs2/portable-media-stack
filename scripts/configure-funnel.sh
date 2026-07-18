@@ -81,6 +81,11 @@ if [ "${AUTO_CONFIGURE_FUNNEL:-false}" != "true" ]; then
   exit 0
 fi
 
+if [ "${FUNNEL_JELLYFIN:-false}" = "true" ] && [ "${FUNNEL_SEERR:-false}" = "true" ] && [ "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" = "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" ]; then
+  echo "Jellyfin and Seerr cannot share Funnel public port ${FUNNEL_SEERR_PUBLIC_PORT:-10000}. Disable one or choose a different allowed port." >&2
+  exit 1
+fi
+
 run_funnel() {
   local enabled="$1"
   local public_port="$2"
@@ -121,6 +126,9 @@ fi
 if [ "${FUNNEL_JELLYFIN:-false}" = "true" ]; then
   clear_funnel_port "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}"
 fi
+if [ "${FUNNEL_SEERR:-false}" = "true" ]; then
+  clear_funnel_port "${FUNNEL_SEERR_PUBLIC_PORT:-10000}"
+fi
 
 if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
   if [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
@@ -136,6 +144,7 @@ else
   run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr"
 fi
 run_funnel "${FUNNEL_JELLYFIN:-false}" "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" "http://127.0.0.1:${JELLYFIN_PORT:-8096}" "jellyfin"
+run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" "http://127.0.0.1:${SEERR_PORT:-5055}" "seerr"
 
 dns_name="$(tailscale status --json | python3 -c 'import sys,json; d=json.load(sys.stdin); print((d.get("Self",{}).get("DNSName","") or "").rstrip("."))')"
 
@@ -153,4 +162,5 @@ if [ -n "$dns_name" ]; then
     print_url_hint "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-8443}" "Sonarr" "$dns_name"
   fi
   print_url_hint "${FUNNEL_JELLYFIN:-false}" "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}" "Jellyfin" "$dns_name"
+  print_url_hint "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-10000}" "Seerr" "$dns_name"
 fi

@@ -1,6 +1,6 @@
 # Portable Media Stack
 
-Portable Docker Compose stack for Jellyfin, Radarr, Sonarr, Prowlarr, NZBDAV, and optional legacy SABnzbd.
+Portable Docker Compose stack for Jellyfin, Radarr, Sonarr, Prowlarr, Seerr, NZBDAV, and optional legacy SABnzbd.
 
 Goals:
 - easy to deploy on multiple machines
@@ -89,6 +89,7 @@ Installer prompts cover:
 - whether to expose Radarr
 - whether to expose Sonarr
 - whether to expose Jellyfin
+- whether to expose Seerr
 - which public Funnel paths to use for Radarr/Sonarr when path-based mode is enabled
 - which public Funnel ports to use when path-based mode is disabled
 
@@ -98,9 +99,11 @@ Recommended defaults for your use case:
 - `FUNNEL_RADARR=true`
 - `FUNNEL_SONARR=true`
 - `FUNNEL_JELLYFIN=false`
+- `FUNNEL_SEERR=true`
 - `FUNNEL_RADARR_PUBLIC_PORT=443`
 - `FUNNEL_SONARR_PUBLIC_PORT=443`
 - `FUNNEL_JELLYFIN_PUBLIC_PORT=10000`
+- `FUNNEL_SEERR_PUBLIC_PORT=10000`
 - `FUNNEL_RADARR_PATH=/radarr`
 - `FUNNEL_SONARR_PATH=/sonarr`
 - `INSTALL_TRAEFIK=true`
@@ -120,6 +123,9 @@ In Funnel mode, the bundled Traefik front door now uses a generated file-provide
 In the verified NZBDAV setup, keep NZBDAV private and expose only Radarr/Sonarr through Funnel paths. The working public URL shape is:
 - `https://<device>.<tailnet>.ts.net/radarr`
 - `https://<device>.<tailnet>.ts.net/sonarr`
+
+Seerr is the public-friendly request portal. In Funnel mode it is exposed on its own Funnel port by default:
+- `https://<device>.<tailnet>.ts.net:10000`
 
 For the current test machine this resolved as:
 - `https://ethan.wolverine-crocodile.ts.net/radarr`
@@ -170,6 +176,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - For public Radarr/Sonarr exposure, use strong app credentials.
 - Tailscale Funnel uses your tailnet's `*.ts.net` naming, not your own custom public CNAMEs.
 - With NZBDAV enabled, Sonarr and Radarr still use a SAB-compatible download-client integration, but the client host should be `nzbdav` on port `3000`.
+- Seerr is enabled by `ENABLE_SEERR=true`, stores config in `${SEERR_CONFIG}`, listens locally on `${SEERR_PORT:-5055}`, and is the recommended family-facing request UI.
 - Sonarr's library root folder inside the container is `/tv`; Radarr's library root folder is `/movies`.
 - NZBDAV completed downloads live under `/downloads/nzbdav-completed/<category>` inside the containers, backed by `${DOWNLOADS_PATH}/nzbdav-completed/<category>` on the host.
 

@@ -107,6 +107,23 @@ services:
       - ${NZBDAV_CONFIG:-./config/nzbdav}:/config
       - ${DOWNLOADS_PATH:-/srv/downloads}:/downloads
 
+  seerr:
+    profiles: ["seerr"]
+    image: seerr/seerr:latest
+    container_name: ${STACK_NAME:-portable-media-stack}_seerr
+    restart: unless-stopped
+    networks:
+      - media
+      - egress
+    ports:
+      - "${SEERR_PORT:-5055}:5055"
+    environment:
+      LOG_LEVEL: info
+      TZ: ${TZ:-UTC}
+      PORT: 5055
+    volumes:
+      - ${SEERR_CONFIG:-./config/seerr}:/app/config
+
 networks:
   media:
     name: ${STACK_NAME:-portable-media-stack}_${MEDIA_NETWORK:-media}

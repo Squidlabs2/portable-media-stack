@@ -31,6 +31,9 @@ fi
 if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   PROFILES+=(--profile nzbdav)
 fi
+if [ "${ENABLE_SEERR:-false}" = "true" ]; then
+  PROFILES+=(--profile seerr)
+fi
 
 if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
   ./scripts/write-funnel-traefik-config.sh

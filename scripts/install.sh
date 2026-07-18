@@ -24,9 +24,12 @@ funnel_expected_summary() {
     if [ "${FUNNEL_JELLYFIN:-false}" = "true" ]; then
       printf ', Jellyfin on port %s' "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}"
     fi
+    if [ "${FUNNEL_SEERR:-false}" = "true" ]; then
+      printf ', Seerr on port %s' "${FUNNEL_SEERR_PUBLIC_PORT:-10000}"
+    fi
     printf '\n'
   else
-    echo "Expected public mapping: Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}, Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}, Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000} if enabled"
+    echo "Expected public mapping: Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}, Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}, Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000} if enabled, Seerr on ${FUNNEL_SEERR_PUBLIC_PORT:-10000} if enabled"
   fi
 }
 
@@ -81,6 +84,9 @@ if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
 fi
 if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   PROFILES+=(--profile nzbdav)
+fi
+if [ "${ENABLE_SEERR:-false}" = "true" ]; then
+  PROFILES+=(--profile seerr)
 fi
 
 if [ "$DRY_RUN" = true ]; then
@@ -137,6 +143,9 @@ if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
 fi
 if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   echo "NZBDAV:   http://$(hostname -s):${NZBDAV_PORT}"
+fi
+if [ "${ENABLE_SEERR:-false}" = "true" ]; then
+  echo "Seerr:    http://$(hostname -s):${SEERR_PORT}"
 fi
 if [ "$MODE" = "traefik-private-dns" ] || [ "$MODE" = "traefik-public-dns" ]; then
   echo "Traefik:  https://${TRAEFIK_DASHBOARD_HOST}"

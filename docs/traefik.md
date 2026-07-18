@@ -14,7 +14,7 @@ What it does:
 - publishes ports 80 and 443 by default
 - stores ACME state in `${TRAEFIK_CONFIG_DIR}`
 - enables the dashboard at `https://${TRAEFIK_DASHBOARD_HOST}`
-- routes Jellyfin, Radarr, Sonarr, Prowlarr, SABnzbd, and optional NZBDAV by hostname
+- routes Jellyfin, Radarr, Sonarr, Prowlarr, Seerr, SABnzbd, and optional NZBDAV by hostname
 
 ## 2. External Traefik
 

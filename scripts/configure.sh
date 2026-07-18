@@ -19,6 +19,28 @@ if [ ! -f "$ENV_FILE" ]; then
   cp "$ENV_TEMPLATE" "$ENV_FILE"
 fi
 
+python3 - "$ENV_FILE" "$ENV_TEMPLATE" <<'PY'
+from pathlib import Path
+import sys
+
+env_path = Path(sys.argv[1])
+template_path = Path(sys.argv[2])
+env_lines = env_path.read_text().splitlines()
+known = {line.split("=", 1)[0] for line in env_lines if line and not line.lstrip().startswith("#") and "=" in line}
+
+missing = []
+for line in template_path.read_text().splitlines():
+    if not line or line.lstrip().startswith("#") or "=" not in line:
+        continue
+    key = line.split("=", 1)[0]
+    if key not in known:
+        missing.append(line)
+        known.add(key)
+
+if missing:
+    env_path.write_text("\n".join(env_lines + missing) + "\n")
+PY
+
 legacy_or_empty() {
   local value="$1"
   shift
@@ -156,9 +178,11 @@ apply_mode_defaults() {
       set_kv FUNNEL_RADARR true
       set_kv FUNNEL_SONARR true
       set_kv FUNNEL_JELLYFIN false
+      set_kv FUNNEL_SEERR true
       set_kv FUNNEL_RADARR_PUBLIC_PORT 443
       set_kv FUNNEL_SONARR_PUBLIC_PORT 443
       set_kv FUNNEL_JELLYFIN_PUBLIC_PORT 10000
+      set_kv FUNNEL_SEERR_PUBLIC_PORT 10000
       set_kv FUNNEL_RADARR_PATH /radarr
       set_kv FUNNEL_SONARR_PATH /sonarr
       set_kv FUNNEL_JELLYFIN_PATH /jellyfin
@@ -207,12 +231,14 @@ if [ "$(get_value AUTO_APPLY_BOOTSTRAP_DATA)" = "true" ]; then
 fi
 prompt_value ENABLE_SABNZBD "Enable SABnzbd (true|false)"
 prompt_value ENABLE_NZBDAV "Enable NZBDAV (true|false)"
+prompt_value ENABLE_SEERR "Enable Seerr request portal (true|false)"
 prompt_value JELLYFIN_HOST "Jellyfin hostname"
 prompt_value RADARR_HOST "Radarr hostname"
 prompt_value SONARR_HOST "Sonarr hostname"
 prompt_value PROWLARR_HOST "Prowlarr hostname"
 prompt_value SABNZBD_HOST "SABnzbd hostname"
 prompt_value NZBDAV_HOST "NZBDAV hostname"
+prompt_value SEERR_HOST "Seerr hostname"
 
 MODE_VALUE="$(get_value MODE)"
 if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
@@ -222,6 +248,7 @@ if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
   prompt_value FUNNEL_RADARR "Expose Radarr through Funnel (recommended: true)"
   prompt_value FUNNEL_SONARR "Expose Sonarr through Funnel (recommended: true)"
   prompt_value FUNNEL_JELLYFIN "Expose Jellyfin through Funnel (recommended: false)"
+  prompt_value FUNNEL_SEERR "Expose Seerr through Funnel on port 10000 (recommended: true)"
   if [ "$(get_value FUNNEL_USE_PATHS)" = "true" ]; then
     if [ "$(get_value INSTALL_TRAEFIK)" = "true" ]; then
       prompt_value TRAEFIK_FUNNEL_PORT "Local Traefik port used behind Funnel (recommended: 8088)"
@@ -233,10 +260,14 @@ if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
     if [ "$(get_value FUNNEL_JELLYFIN)" = "true" ]; then
       prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000)"
     fi
+    if [ "$(get_value FUNNEL_SEERR)" = "true" ]; then
+      prompt_value FUNNEL_SEERR_PUBLIC_PORT "Public Funnel port for Seerr (recommended: 10000)"
+    fi
   else
     prompt_value FUNNEL_RADARR_PUBLIC_PORT "Public Funnel port for Radarr (recommended: 443)"
     prompt_value FUNNEL_SONARR_PUBLIC_PORT "Public Funnel port for Sonarr (recommended: 8443)"
     prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000 if enabled)"
+    prompt_value FUNNEL_SEERR_PUBLIC_PORT "Public Funnel port for Seerr (recommended: 10000 if enabled)"
   fi
 elif [ "$MODE_VALUE" = "traefik-private-dns" ] || [ "$MODE_VALUE" = "traefik-public-dns" ]; then
   prompt_value INSTALL_TRAEFIK "Install bundled Traefik (recommended: true)"
