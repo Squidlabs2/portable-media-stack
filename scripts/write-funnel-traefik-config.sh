@@ -52,6 +52,16 @@ http:
         - funnel
       rule: PathPrefix(\`${seerr_path}\`)
       service: funnel-seerr
+    funnel-seerr-api:
+      entryPoints:
+        - funnel
+      rule: PathPrefix(\`/api/v1\`)
+      service: funnel-seerr
+    funnel-seerr-next:
+      entryPoints:
+        - funnel
+      rule: PathPrefix(\`/_next\`)
+      service: funnel-seerr
   services:
     funnel-radarr:
       loadBalancer:

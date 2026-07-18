@@ -139,6 +139,8 @@ if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
     run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "${funnel_proxy_base}$(normalize_path "${FUNNEL_RADARR_PATH:-/radarr}")" "radarr" "${FUNNEL_RADARR_PATH:-/radarr}"
     run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "${funnel_proxy_base}$(normalize_path "${FUNNEL_SONARR_PATH:-/sonarr}")" "sonarr" "${FUNNEL_SONARR_PATH:-/sonarr}"
     run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-443}" "${funnel_proxy_base}$(normalize_path "${FUNNEL_SEERR_PATH:-/seerr}")" "seerr" "${FUNNEL_SEERR_PATH:-/seerr}"
+    run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-443}" "${funnel_proxy_base}/api/v1" "seerr API" "/api/v1"
+    run_funnel "${FUNNEL_SEERR:-false}" "${FUNNEL_SEERR_PUBLIC_PORT:-443}" "${funnel_proxy_base}/_next" "seerr assets" "/_next"
   else
     run_funnel "${FUNNEL_RADARR:-true}" "${FUNNEL_RADARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${RADARR_PORT:-7878}" "radarr" "${FUNNEL_RADARR_PATH:-/radarr}"
     run_funnel "${FUNNEL_SONARR:-true}" "${FUNNEL_SONARR_PUBLIC_PORT:-443}" "http://127.0.0.1:${SONARR_PORT:-8989}" "sonarr" "${FUNNEL_SONARR_PATH:-/sonarr}"

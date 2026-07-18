@@ -41,6 +41,21 @@ server {
     listen 80;
     server_name _;
 
+    location ^~ /api/v1 {
+        proxy_pass http://seerr:5055;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$seerr_x_forwarded_proto;
+    }
+
+    location ^~ /_next {
+        proxy_pass http://seerr:5055;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-Proto \$seerr_x_forwarded_proto;
+    }
+
     location ^~ ${seerr_path} {
         set \$app '${seerr_path#/}';
         rewrite ^${seerr_path}/?(.*)\$ /\$1 break;
@@ -58,7 +73,6 @@ server {
         proxy_redirect /login https://\$host/\$app/login;
         proxy_set_header Accept-Encoding "";
         sub_filter_once off;
-        sub_filter_types *;
         sub_filter 'href="/"' 'href="/\$app"';
         sub_filter 'href="/login"' 'href="/\$app/login"';
         sub_filter 'href:"/"' 'href:"/\$app"';
