@@ -72,6 +72,7 @@ services:
       - ${PROWLARR_CONFIG:-./config/prowlarr}:/config
 
   sabnzbd:
+    profiles: ["sabnzbd"]
     image: lscr.io/linuxserver/sabnzbd:latest
     container_name: ${STACK_NAME:-portable-media-stack}_sabnzbd
     restart: unless-stopped
@@ -95,6 +96,7 @@ services:
     restart: unless-stopped
     networks:
       - media
+      - egress
     ports:
       - "${NZBDAV_PORT:-3000}:3000"
     environment:

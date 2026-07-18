@@ -25,6 +25,9 @@ elif [ "${MODE:-tailnet-only}" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-
 fi
 
 PROFILES=()
+if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
+  PROFILES+=(--profile sabnzbd)
+fi
 if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   PROFILES+=(--profile nzbdav)
 fi
@@ -35,6 +38,8 @@ fi
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" pull
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
-./scripts/configure-sab-paths.sh
+if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
+  ./scripts/configure-sab-paths.sh
+fi
 
 echo "Update complete"

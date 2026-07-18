@@ -9,8 +9,8 @@ What the export contains:
 - Prowlarr indexer definitions
 - one Sonarr Prowlarr application template
 - one Radarr Prowlarr application template
-- Sonarr SABnzbd download client template
-- Radarr SABnzbd download client template
+- Sonarr SAB-compatible download client template
+- Radarr SAB-compatible download client template
 
 Why it is local-only:
 - it can contain API keys and indexer credentials

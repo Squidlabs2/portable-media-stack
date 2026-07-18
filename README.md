@@ -1,6 +1,6 @@
 # Portable Media Stack
 
-Portable Docker Compose stack for Jellyfin, Radarr, Sonarr, Prowlarr, SABnzbd, and optional NZBDAV.
+Portable Docker Compose stack for Jellyfin, Radarr, Sonarr, Prowlarr, optional SABnzbd, and optional NZBDAV.
 
 Goals:
 - easy to deploy on multiple machines
@@ -181,7 +181,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 
 ## Automating fresh Arr setup from your current stack
 
-If you want a clean new install but want it to reuse your current Prowlarr indexers and SABnzbd wiring:
+If you want a clean new install but want it to reuse your current Prowlarr indexers and SAB-compatible downloader wiring:
 
 1. On the current working machine, run:
 
@@ -225,10 +225,10 @@ If that file is missing, `install.sh` also falls back automatically to:
 - import Prowlarr indexers
 - create a Sonarr app connection in Prowlarr
 - create a Radarr app connection in Prowlarr
-- create the SABnzbd download client in Sonarr
-- create the SABnzbd download client in Radarr
+- create the configured SAB-compatible download client in Sonarr
+- create the configured SAB-compatible download client in Radarr
 
-If an exported indexer has bad or missing credentials, bootstrap apply will warn and skip that indexer instead of aborting the whole install. That lets the fresh stack still finish wiring Sonarr, Radarr, Prowlarr app sync, and SABnzbd.
+If an exported indexer has bad or missing credentials, bootstrap apply will warn and skip that indexer instead of aborting the whole install. That lets the fresh stack still finish wiring Sonarr, Radarr, Prowlarr app sync, and the configured SAB-compatible downloader.
 
 This is designed for a fresh single-Radarr install, not for copying old full app configs.
 

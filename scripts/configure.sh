@@ -204,6 +204,7 @@ if [ "$(get_value AUTO_APPLY_BOOTSTRAP_DATA)" = "true" ]; then
   prompt_value BOOTSTRAP_DATA_FILE "Bootstrap data file path"
   prompt_value BOOTSTRAP_WAIT_SECONDS "Bootstrap apply wait timeout (seconds)"
 fi
+prompt_value ENABLE_SABNZBD "Enable SABnzbd (true|false)"
 prompt_value ENABLE_NZBDAV "Enable NZBDAV (true|false)"
 prompt_value JELLYFIN_HOST "Jellyfin hostname"
 prompt_value RADARR_HOST "Radarr hostname"

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import configparser
 import json
 import os
 import shutil
@@ -83,6 +84,40 @@ def read_ini_value(config_path: str, key_name: str) -> str:
         if line.startswith(f"{key_name} ="):
             return line.split("=", 1)[1].strip().strip('"')
     raise RuntimeError(f"Missing {key_name} in {config_path}")
+
+
+def read_sab_ini(config_path: str) -> configparser.ConfigParser:
+    def lower_optionstr(optionstr: str) -> str:
+        return optionstr.lower()
+
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.optionxform = lower_optionstr
+    parser.read_string("[root]\n" + Path(config_path).read_text())
+    return parser
+
+
+def export_usenet_providers_from_sab(config_path: str):
+    parser = read_sab_ini(config_path)
+    providers = []
+    for section in parser.sections():
+        if not (section.startswith("[") and section.endswith("]")):
+            continue
+        server = parser[section]
+        if server.get("host") and server.get("enable", "1") != "0":
+            providers.append(
+                {
+                    "Type": 1,
+                    "Host": server.get("host", ""),
+                    "Port": int(server.get("port", "563") or 563),
+                    "UseSsl": server.get("ssl", "1") == "1",
+                    "User": server.get("username", ""),
+                    "Pass": server.get("password", ""),
+                    "MaxConnections": int(server.get("connections", "20") or 20),
+                }
+            )
+    if not providers:
+        raise RuntimeError(f"No enabled SABnzbd servers found in {config_path}")
+    return providers
 
 
 def http_json(url: str, api_key: str, method: str = "GET", payload=None):
@@ -219,6 +254,7 @@ def export_data(output_path: Path):
     sonarr_key = read_api_key(env("SOURCE_SONARR_CONFIG_XML", "/media/dockerfiles/sonarr/config.xml"))
     radarr_key = read_api_key(env("SOURCE_RADARR_CONFIG_XML", "/media/dockerfiles/radarr/config.xml"))
     prowlarr_db = Path(env("SOURCE_PROWLARR_DB", str(Path(env("SOURCE_PROWLARR_CONFIG_XML", "/media/dockerfiles/prowlarr/config.xml")).with_name("prowlarr.db"))))
+    source_sabnzbd_ini = env("SOURCE_SABNZBD_INI", "/media/dockerfiles/sabnzbd/sabnzbd.ini")
 
     prowlarr_indexers = http_json(f"{prowlarr_url}/api/v1/indexer", prowlarr_key) or []
     prowlarr_indexers = enrich_indexer_fields_from_db(prowlarr_indexers, prowlarr_db)
@@ -230,6 +266,7 @@ def export_data(output_path: Path):
     radarr_app_template = sanitize_item(pick_first(prowlarr_apps, implementation_name="Radarr"), APP_ALLOWED_KEYS)
     sonarr_sab = sanitize_item(pick_first(sonarr_clients, implementation_name="SABnzbd"), DOWNLOAD_CLIENT_ALLOWED_KEYS)
     radarr_sab = sanitize_item(pick_first(radarr_clients, implementation_name="SABnzbd"), DOWNLOAD_CLIENT_ALLOWED_KEYS)
+    usenet_providers = export_usenet_providers_from_sab(source_sabnzbd_ini)
 
     payload = {
         "version": 1,
@@ -252,6 +289,10 @@ def export_data(output_path: Path):
         },
         "radarr": {
             "downloadClient": radarr_sab,
+        },
+        "downloader": {
+            "type": "sab-compatible",
+            "usenetProviders": usenet_providers,
         },
     }
 
@@ -367,6 +408,61 @@ def restart_sabnzbd():
     subprocess.run(["docker", "compose", "restart", "sabnzbd"], cwd=ROOT_DIR, check=True, stdout=subprocess.DEVNULL)
 
 
+def restart_nzbdav():
+    subprocess.run(["docker", "compose", "restart", "nzbdav"], cwd=ROOT_DIR, check=True, stdout=subprocess.DEVNULL)
+
+
+def upsert_sqlite_config_items(db_path: Path, items):
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+        for key, value in items.items():
+            cur.execute(
+                "insert into ConfigItems(ConfigName, ConfigValue) values(?, ?) on conflict(ConfigName) do update set ConfigValue=excluded.ConfigValue",
+                (key, value),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def read_nzbdav_api_key(db_path: Path) -> str:
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+        row = cur.execute("select ConfigValue from ConfigItems where ConfigName = 'api.key'").fetchone()
+        if not row or not row[0]:
+            raise RuntimeError(f"Missing api.key in {db_path}")
+        return row[0]
+    finally:
+        conn.close()
+
+
+def configure_nzbdav(db_path: Path, *, payload, internal_radarr_url: str, internal_sonarr_url: str, radarr_key: str, sonarr_key: str):
+    import_strategy = env("TARGET_NZBDAV_IMPORT_STRATEGY", "strm")
+    config_items = {
+        "usenet.providers": json.dumps({"Providers": payload.get("downloader", {}).get("usenetProviders", [])}),
+        "arr.instances": json.dumps(
+            {
+                "RadarrInstances": [{"Host": internal_radarr_url, "ApiKey": radarr_key}],
+                "SonarrInstances": [{"Host": internal_sonarr_url, "ApiKey": sonarr_key}],
+                "QueueRules": [],
+            }
+        ),
+        "api.import-strategy": import_strategy,
+        "api.categories": "movies,tv,audio,software",
+    }
+
+    if import_strategy == "strm":
+        config_items["api.completed-downloads-dir"] = env("TARGET_NZBDAV_COMPLETED_DOWNLOADS_DIR", "/downloads/nzbdav-completed")
+        config_items["general.base-url"] = env("TARGET_NZBDAV_BASE_URL", f"http://nzbdav:{env('NZBDAV_PORT', '3000')}")
+    else:
+        config_items["rclone.mount-dir"] = env("TARGET_NZBDAV_RCLONE_MOUNT_DIR", "/mnt/nzbdav")
+
+    upsert_sqlite_config_items(db_path, config_items)
+
+
 def existing_by_name(items):
     return {item.get("name"): item for item in items}
 
@@ -397,8 +493,11 @@ def ensure_download_client(base_url: str, api_key: str, payload, label: str):
     existing = existing_by_name(http_json(endpoint, api_key))
     name = payload.get("name")
     if name in existing:
-        print(f"Download client exists, skipping {label}: {name}")
-        return False
+        payload = json.loads(json.dumps(payload))
+        payload["id"] = existing[name]["id"]
+        http_json(f"{endpoint}/{payload['id']}", api_key, method="PUT", payload=payload)
+        print(f"Updated {label} download client: {name}")
+        return True
     try:
         http_json(endpoint, api_key, method="POST", payload=payload)
         print(f"Created {label} download client: {name}")
@@ -451,21 +550,26 @@ def ensure_prowlarr_application(prowlarr_url: str, prowlarr_key: str, payload, l
 
 def apply_data(input_path: Path, timeout_seconds: int):
     data = json.loads(input_path.read_text())
+    use_nzbdav = env("ENABLE_NZBDAV", "false").lower() == "true"
 
     prowlarr_config = Path(env("PROWLARR_CONFIG", "./config/prowlarr")) / "config.xml"
     sonarr_config = Path(env("SONARR_CONFIG", "./config/sonarr")) / "config.xml"
     radarr_config = Path(env("RADARR_CONFIG", "./config/radarr")) / "config.xml"
     sabnzbd_config = Path(env("SABNZBD_CONFIG", "./config/sabnzbd")) / "sabnzbd.ini"
+    nzbdav_db = Path(env("NZBDAV_CONFIG", "./config/nzbdav")) / "db.sqlite"
 
-    for path in (prowlarr_config, sonarr_config, radarr_config, sabnzbd_config):
+    config_paths = [prowlarr_config, sonarr_config, radarr_config]
+    if use_nzbdav:
+        config_paths.append(nzbdav_db)
+    else:
+        config_paths.append(sabnzbd_config)
+
+    for path in config_paths:
         wait_for_config(path, timeout_seconds)
 
     prowlarr_key = read_api_key(str(prowlarr_config))
     sonarr_key = read_api_key(str(sonarr_config))
     radarr_key = read_api_key(str(radarr_config))
-    sabnzbd_key = read_ini_value(str(sabnzbd_config), "api_key")
-    sabnzbd_username = read_ini_value(str(sabnzbd_config), "username")
-    sabnzbd_password = read_ini_value(str(sabnzbd_config), "password")
     prowlarr_url_base = read_url_base(str(prowlarr_config))
     sonarr_url_base = read_url_base(str(sonarr_config))
     radarr_url_base = read_url_base(str(radarr_config))
@@ -473,47 +577,76 @@ def apply_data(input_path: Path, timeout_seconds: int):
     prowlarr_url = env("TARGET_PROWLARR_URL", f"http://127.0.0.1:{env('PROWLARR_PORT', '9696')}{prowlarr_url_base}")
     sonarr_url = env("TARGET_SONARR_URL", f"http://127.0.0.1:{env('SONARR_PORT', '8989')}{sonarr_url_base}")
     radarr_url = env("TARGET_RADARR_URL", f"http://127.0.0.1:{env('RADARR_PORT', '7878')}{radarr_url_base}")
-    sabnzbd_url = env("TARGET_SABNZBD_URL", f"http://127.0.0.1:{env('SABNZBD_PORT', '8080')}")
 
     internal_prowlarr_url = env("TARGET_INTERNAL_PROWLARR_URL", f"http://prowlarr:9696{prowlarr_url_base}")
     internal_sonarr_url = env("TARGET_INTERNAL_SONARR_URL", f"http://sonarr:8989{sonarr_url_base}")
     internal_radarr_url = env("TARGET_INTERNAL_RADARR_URL", f"http://radarr:7878{radarr_url_base}")
-    sabnzbd_host = env("TARGET_INTERNAL_SABNZBD_HOST", "sabnzbd")
-    sabnzbd_port = int(env('TARGET_INTERNAL_SABNZBD_PORT', '8080'))
 
     wait_for_api(f"{prowlarr_url}/api/v1/system/status", prowlarr_key, "Prowlarr", timeout_seconds)
     wait_for_api(f"{sonarr_url}/api/v3/system/status", sonarr_key, "Sonarr", timeout_seconds)
     wait_for_api(f"{radarr_url}/api/v3/system/status", radarr_key, "Radarr", timeout_seconds)
-    wait_for_sab_api(sabnzbd_url, sabnzbd_key, timeout_seconds)
 
-    required_sab_categories = {
-        get_field_value(data["sonarr"]["downloadClient"].get("fields", []), "tvCategory", ""),
-        get_field_value(data["radarr"]["downloadClient"].get("fields", []), "movieCategory", ""),
-    }
-    if ensure_sab_categories(sabnzbd_config, required_sab_categories):
-        restart_sabnzbd()
+    if use_nzbdav:
+        configure_nzbdav(
+            nzbdav_db,
+            payload=data,
+            internal_radarr_url=internal_radarr_url,
+            internal_sonarr_url=internal_sonarr_url,
+            radarr_key=radarr_key,
+            sonarr_key=sonarr_key,
+        )
+        restart_nzbdav()
+        nzbdav_key = read_nzbdav_api_key(nzbdav_db)
+        nzbdav_url = env("TARGET_NZBDAV_URL", f"http://127.0.0.1:{env('NZBDAV_PORT', '3000')}")
+        wait_for_sab_api(nzbdav_url, nzbdav_key, timeout_seconds)
+        downloader_host = env("TARGET_INTERNAL_NZBDAV_HOST", "nzbdav")
+        downloader_port = int(env("TARGET_INTERNAL_NZBDAV_PORT", env("NZBDAV_PORT", "3000")))
+        downloader_api_key = nzbdav_key
+        downloader_username = ""
+        downloader_password = ""
+    else:
+        sabnzbd_key = read_ini_value(str(sabnzbd_config), "api_key")
+        sabnzbd_username = read_ini_value(str(sabnzbd_config), "username")
+        sabnzbd_password = read_ini_value(str(sabnzbd_config), "password")
+        sabnzbd_url = env("TARGET_SABNZBD_URL", f"http://127.0.0.1:{env('SABNZBD_PORT', '8080')}")
+        sabnzbd_host = env("TARGET_INTERNAL_SABNZBD_HOST", "sabnzbd")
+        sabnzbd_port = int(env('TARGET_INTERNAL_SABNZBD_PORT', '8080'))
         wait_for_sab_api(sabnzbd_url, sabnzbd_key, timeout_seconds)
 
-    if ensure_sab_host_whitelist(sabnzbd_config, [sabnzbd_host, "localhost"]):
-        restart_sabnzbd()
-        wait_for_sab_api(sabnzbd_url, sabnzbd_key, timeout_seconds)
+        required_sab_categories = {
+            get_field_value(data["sonarr"]["downloadClient"].get("fields", []), "tvCategory", ""),
+            get_field_value(data["radarr"]["downloadClient"].get("fields", []), "movieCategory", ""),
+        }
+        if ensure_sab_categories(sabnzbd_config, required_sab_categories):
+            restart_sabnzbd()
+            wait_for_sab_api(sabnzbd_url, sabnzbd_key, timeout_seconds)
+
+        if ensure_sab_host_whitelist(sabnzbd_config, [sabnzbd_host, "localhost"]):
+            restart_sabnzbd()
+            wait_for_sab_api(sabnzbd_url, sabnzbd_key, timeout_seconds)
+
+        downloader_host = sabnzbd_host
+        downloader_port = sabnzbd_port
+        downloader_api_key = sabnzbd_key
+        downloader_username = sabnzbd_username
+        downloader_password = sabnzbd_password
 
     created, skipped, failed = ensure_indexers(prowlarr_url, prowlarr_key, data["prowlarr"]["indexers"])
     sonarr_download_client = configure_download_client_payload(
         data["sonarr"]["downloadClient"],
-        sab_host=sabnzbd_host,
-        sab_port=sabnzbd_port,
-        sab_api_key=sabnzbd_key,
-        sab_username=sabnzbd_username,
-        sab_password=sabnzbd_password,
+        sab_host=downloader_host,
+        sab_port=downloader_port,
+        sab_api_key=downloader_api_key,
+        sab_username=downloader_username,
+        sab_password=downloader_password,
     )
     radarr_download_client = configure_download_client_payload(
         data["radarr"]["downloadClient"],
-        sab_host=sabnzbd_host,
-        sab_port=sabnzbd_port,
-        sab_api_key=sabnzbd_key,
-        sab_username=sabnzbd_username,
-        sab_password=sabnzbd_password,
+        sab_host=downloader_host,
+        sab_port=downloader_port,
+        sab_api_key=downloader_api_key,
+        sab_username=downloader_username,
+        sab_password=downloader_password,
     )
     ensure_download_client(sonarr_url, sonarr_key, sonarr_download_client, "Sonarr")
     ensure_download_client(radarr_url, radarr_key, radarr_download_client, "Radarr")

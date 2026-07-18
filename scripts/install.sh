@@ -76,6 +76,9 @@ elif [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true"
 fi
 
 PROFILES=()
+if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
+  PROFILES+=(--profile sabnzbd)
+fi
 if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   PROFILES+=(--profile nzbdav)
 fi
@@ -103,7 +106,9 @@ if [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ]
 fi
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
-./scripts/configure-sab-paths.sh
+if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
+  ./scripts/configure-sab-paths.sh
+fi
 
 if [ "$MODE" = "tailscale-funnel" ]; then
   ./scripts/configure-arr-url-bases.sh
@@ -124,7 +129,9 @@ echo "Jellyfin: http://$(hostname -s):${JELLYFIN_PORT}"
 echo "Radarr:   http://$(hostname -s):${RADARR_PORT}"
 echo "Sonarr:   http://$(hostname -s):${SONARR_PORT}"
 echo "Prowlarr: http://$(hostname -s):${PROWLARR_PORT}"
-echo "SABnzbd:  http://$(hostname -s):${SABNZBD_PORT}"
+if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
+  echo "SABnzbd:  http://$(hostname -s):${SABNZBD_PORT}"
+fi
 if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   echo "NZBDAV:   http://$(hostname -s):${NZBDAV_PORT}"
 fi
