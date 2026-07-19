@@ -34,7 +34,7 @@ DEVICE_NAME=ethan
 CLOUDFLARE_TUNNEL_TOKEN_FILE=./secrets/cloudflare-tunnel-token
 ```
 
-Paste the token into that ignored local file, or paste it into the installer prompt so preflight writes the file with `0600` permissions. The Compose service reads the token through a mounted secret file instead of placing the token directly in the container command.
+Paste the token into that ignored local file, or paste it into the installer prompt so preflight writes the file readable by the `cloudflared` container. The Compose service reads the token through a mounted secret file instead of placing the token directly in the container command.
 
 Then add Public Hostname routes for that tunnel:
 

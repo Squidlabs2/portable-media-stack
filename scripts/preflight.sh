@@ -46,7 +46,7 @@ if [ "${MODE:-tailnet-only}" = "cloudflare-tunnel" ]; then
     [ "$token_dir" != "$token_file" ] || token_dir="."
     mkdir -p "$token_dir"
     printf '%s' "$CLOUDFLARE_TUNNEL_TOKEN" > "$token_file"
-    chmod 600 "$token_file"
+    chmod 644 "$token_file"
     echo "Wrote Cloudflare Tunnel token file: $token_file"
   fi
   [ -s "$token_file" ] || fail "Cloudflare Tunnel token file is required for MODE=cloudflare-tunnel: $token_file"
