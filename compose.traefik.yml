@@ -39,7 +39,7 @@ services:
     networks:
       - proxy
     labels:
-      - "traefik.enable=true"
+      - "traefik.enable=${TRAEFIK_EXPOSE_ADMIN_APPS:-false}"
       - "traefik.http.routers.prowlarr.rule=Host(`${PROWLARR_HOST}`)"
       - "traefik.http.routers.prowlarr.entrypoints=websecure"
       - "traefik.http.routers.prowlarr.tls=true"
@@ -51,7 +51,7 @@ services:
     networks:
       - proxy
     labels:
-      - "traefik.enable=true"
+      - "traefik.enable=${TRAEFIK_EXPOSE_ADMIN_APPS:-false}"
       - "traefik.http.routers.sabnzbd.rule=Host(`${SABNZBD_HOST}`)"
       - "traefik.http.routers.sabnzbd.entrypoints=websecure"
       - "traefik.http.routers.sabnzbd.tls=true"
@@ -63,7 +63,7 @@ services:
     networks:
       - proxy
     labels:
-      - "traefik.enable=true"
+      - "traefik.enable=${TRAEFIK_EXPOSE_ADMIN_APPS:-false}"
       - "traefik.http.routers.nzbdav.rule=Host(`${NZBDAV_HOST}`)"
       - "traefik.http.routers.nzbdav.entrypoints=websecure"
       - "traefik.http.routers.nzbdav.tls=true"

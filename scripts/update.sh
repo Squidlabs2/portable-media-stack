@@ -21,31 +21,11 @@ prepare_seerr_config() {
   chown "${PUID:-1000}:${PGID:-1000}" "$seerr_config" 2>/dev/null || true
 }
 
-COMPOSE_FILES=(-f compose.yml)
-if [ "${MODE:-tailnet-only}" = "traefik-private-dns" ] || [ "${MODE:-tailnet-only}" = "traefik-public-dns" ]; then
-  COMPOSE_FILES+=(-f compose.traefik.yml)
-  if [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
-    COMPOSE_FILES+=(-f compose.traefik-bundled.yml)
-  else
-    COMPOSE_FILES+=(-f compose.traefik-external.yml)
-  fi
-elif [ "${MODE:-tailnet-only}" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
-  COMPOSE_FILES+=(-f compose.funnel-traefik.yml)
-  COMPOSE_FILES+=(-f compose.funnel-traefik-bundled.yml)
-fi
+# shellcheck disable=SC1091
+source ./scripts/compose-args.sh
+build_compose_args
 
-PROFILES=()
-if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
-  PROFILES+=(--profile sabnzbd)
-fi
-if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
-  PROFILES+=(--profile nzbdav)
-fi
-if [ "${ENABLE_SEERR:-false}" = "true" ]; then
-  PROFILES+=(--profile seerr)
-fi
-
-if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+if funnel_path_mode_enabled; then
   ./scripts/write-seerr-subpath-nginx-config.sh
   ./scripts/write-funnel-traefik-config.sh
 fi
@@ -54,7 +34,7 @@ prepare_seerr_config
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" pull
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
-if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ] && [ "${ENABLE_SEERR:-false}" = "true" ]; then
+if funnel_path_mode_enabled && [ "${ENABLE_SEERR:-false}" = "true" ]; then
   docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d --force-recreate seerr-web
 fi
 if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then

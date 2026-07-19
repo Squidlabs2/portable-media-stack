@@ -6,13 +6,24 @@ cd "$ROOT_DIR"
 
 NON_INTERACTIVE=false
 DRY_RUN=false
-EXTRA_ARGS=()
+
+usage() {
+  echo "Usage: $0 [--non-interactive] [--dry-run]" >&2
+}
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --non-interactive) NON_INTERACTIVE=true ;;
     --dry-run) DRY_RUN=true ;;
-    *) EXTRA_ARGS+=("$1") ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
   esac
   shift
 done
@@ -70,32 +81,164 @@ prepare_seerr_config() {
   chown "${PUID:-1000}:${PGID:-1000}" "$seerr_config" 2>/dev/null || true
 }
 
+prepare_generated_configs() {
+  if funnel_path_mode_enabled; then
+    ./scripts/write-seerr-subpath-nginx-config.sh
+    ./scripts/write-funnel-traefik-config.sh
+  fi
+
+  prepare_seerr_config
+}
+
+recreate_seerr_web_if_needed() {
+  if funnel_path_mode_enabled && [ "${ENABLE_SEERR:-false}" = "true" ]; then
+    docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d --force-recreate seerr-web
+  fi
+}
+
+configure_download_clients() {
+  if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
+    ./scripts/configure-sab-paths.sh
+  fi
+  if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
+    ./scripts/configure-nzbdav-paths.sh
+  fi
+}
+
+configure_ingress() {
+  [ "$MODE" = "tailscale-funnel" ] || return 0
+
+  ./scripts/configure-arr-url-bases.sh
+  ./scripts/configure-funnel.sh
+}
+
+apply_bootstrap_data_if_enabled() {
+  [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ] || return 0
+
+  BOOTSTRAP_INPUT="$(resolve_bootstrap_data_file)"
+  ./scripts/apply-bootstrap-data.sh --input "$BOOTSTRAP_INPUT" --timeout "${BOOTSTRAP_WAIT_SECONDS:-180}"
+}
+
+print_local_urls() {
+  local host
+  host="$(hostname -s)"
+
+  echo "Jellyfin: http://${host}:${JELLYFIN_PORT}"
+  echo "Radarr:   http://${host}:${RADARR_PORT}"
+  echo "Sonarr:   http://${host}:${SONARR_PORT}"
+  echo "Prowlarr: http://${host}:${PROWLARR_PORT}"
+  if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
+    echo "SABnzbd:  http://${host}:${SABNZBD_PORT}"
+  fi
+  if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
+    echo "NZBDAV:   http://${host}:${NZBDAV_PORT}"
+  fi
+  if [ "${ENABLE_SEERR:-false}" = "true" ]; then
+    echo "Seerr:    http://${host}:${SEERR_PORT}"
+  fi
+}
+
+print_traefik_summary() {
+  [ "$MODE" = "traefik-private-dns" ] || [ "$MODE" = "traefik-public-dns" ] || return 0
+
+  echo "Traefik:  https://${TRAEFIK_DASHBOARD_HOST}"
+  if [ "$MODE" = "traefik-public-dns" ]; then
+    echo "Public URLs: https://${RADARR_HOST}, https://${SONARR_HOST}, https://${SEERR_HOST}"
+  fi
+}
+
+print_funnel_summary() {
+  [ "$MODE" = "tailscale-funnel" ] || return 0
+
+  echo "Funnel auto-config: ${AUTO_CONFIGURE_FUNNEL:-false}"
+  if funnel_path_mode_enabled; then
+    echo "Traefik front door: http://$(hostname -s):${TRAEFIK_FUNNEL_PORT:-8088}"
+  fi
+  echo "Funnel helper: ./scripts/configure-funnel.sh"
+  if [ "${AUTO_CONFIGURE_FUNNEL:-false}" = "true" ]; then
+    funnel_expected_summary
+  fi
+}
+
+print_cloudflare_tunnel_summary() {
+  [ "$MODE" = "cloudflare-tunnel" ] || return 0
+
+  echo "Cloudflare Tunnel: enabled"
+  echo "Public URLs: https://${RADARR_HOST}, https://${SONARR_HOST}, https://${SEERR_HOST}"
+  echo "Cloudflare routes should point to internal services: ${RADARR_HOST} -> http://radarr:7878, ${SONARR_HOST} -> http://sonarr:8989, ${SEERR_HOST} -> http://seerr:5055"
+}
+
+print_next_steps() {
+  local ps_cmd
+
+  echo
+  echo "Next steps:"
+  ps_cmd=(docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" ps)
+  printf '  1) Check container status: '
+  printf '%q ' "${ps_cmd[@]}"
+  printf '\n'
+  echo "  2) Open the local URLs above and finish the first-run setup screens."
+  if [ "${ENABLE_SEERR:-false}" = "true" ]; then
+    echo "  3) In Seerr, connect Jellyfin plus Radarr/Sonarr, then keep requests approval-based until you are ready to automate approvals."
+  else
+    echo "  3) Connect Jellyfin plus Radarr/Sonarr/Prowlarr as needed."
+  fi
+
+  case "$MODE" in
+    tailnet-only)
+      echo "  4) Access apps privately over Tailscale or your LAN using the local URLs above."
+      ;;
+    tailscale-funnel)
+      echo "  4) Verify Funnel routes: tailscale funnel status"
+      echo "  5) Test the public Funnel paths, then keep private/admin apps off Funnel unless you intentionally expose them."
+      ;;
+    cloudflare-tunnel)
+      echo "  4) In Cloudflare Zero Trust, confirm this tunnel is healthy."
+      echo "  5) Add Public Hostname routes for this tunnel:"
+      echo "     - ${RADARR_HOST} -> http://radarr:7878"
+      echo "     - ${SONARR_HOST} -> http://sonarr:8989"
+      if [ "${ENABLE_SEERR:-false}" = "true" ]; then
+        echo "     - ${SEERR_HOST} -> http://seerr:5055"
+      fi
+      echo "  6) Test the public URLs above."
+      ;;
+    traefik-private-dns)
+      echo "  4) Point your private DNS names at this host, then test the Traefik URLs above."
+      ;;
+    traefik-public-dns)
+      echo "  4) Confirm public DNS points at this host and ports 80/443 are reachable."
+      echo "  5) Watch Traefik issue certificates, then test the public URLs above."
+      ;;
+  esac
+
+  if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" != "true" ]; then
+    echo "  Optional) Apply exported bootstrap data later: ./scripts/apply-bootstrap-data.sh --input <bootstrap-data.json>"
+  fi
+}
+
+print_install_summary() {
+  echo
+  echo "Stack started."
+  echo "Local config: $ROOT_DIR/.env"
+  echo "Mode: $MODE"
+  echo "Bundled Traefik: ${INSTALL_TRAEFIK:-true}"
+  print_local_urls
+  print_traefik_summary
+  print_funnel_summary
+  print_cloudflare_tunnel_summary
+  print_next_steps
+  if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
+    echo "Bootstrap data applied from: $BOOTSTRAP_INPUT"
+  fi
+}
+
+# shellcheck disable=SC1091
+source ./scripts/compose-args.sh
+
 ./scripts/preflight.sh
 ./scripts/create-networks.sh
 
-COMPOSE_FILES=(-f compose.yml)
-if [ "$MODE" = "traefik-private-dns" ] || [ "$MODE" = "traefik-public-dns" ]; then
-  COMPOSE_FILES+=(-f compose.traefik.yml)
-  if [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
-    COMPOSE_FILES+=(-f compose.traefik-bundled.yml)
-  else
-    COMPOSE_FILES+=(-f compose.traefik-external.yml)
-  fi
-elif [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
-  COMPOSE_FILES+=(-f compose.funnel-traefik.yml)
-  COMPOSE_FILES+=(-f compose.funnel-traefik-bundled.yml)
-fi
-
-PROFILES=()
-if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
-  PROFILES+=(--profile sabnzbd)
-fi
-if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
-  PROFILES+=(--profile nzbdav)
-fi
-if [ "${ENABLE_SEERR:-false}" = "true" ]; then
-  PROFILES+=(--profile seerr)
-fi
+build_compose_args
 
 if [ "$DRY_RUN" = true ]; then
   echo "Dry run only. Resolved compose command:"
@@ -115,65 +258,12 @@ if [ "$DRY_RUN" = true ]; then
   exit 0
 fi
 
-if [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
-  ./scripts/write-seerr-subpath-nginx-config.sh
-  ./scripts/write-funnel-traefik-config.sh
-fi
-
-prepare_seerr_config
+prepare_generated_configs
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
-if [ "$MODE" = "tailscale-funnel" ] && [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ] && [ "${ENABLE_SEERR:-false}" = "true" ]; then
-  docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d --force-recreate seerr-web
-fi
-if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
-  ./scripts/configure-sab-paths.sh
-fi
-if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
-  ./scripts/configure-nzbdav-paths.sh
-fi
+recreate_seerr_web_if_needed
+configure_download_clients
+configure_ingress
+apply_bootstrap_data_if_enabled
 
-if [ "$MODE" = "tailscale-funnel" ]; then
-  ./scripts/configure-arr-url-bases.sh
-  ./scripts/configure-funnel.sh
-fi
-
-if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
-  BOOTSTRAP_INPUT="$(resolve_bootstrap_data_file)"
-  ./scripts/apply-bootstrap-data.sh --input "$BOOTSTRAP_INPUT" --timeout "${BOOTSTRAP_WAIT_SECONDS:-180}"
-fi
-
-echo
-echo "Stack started."
-echo "Local config: $ROOT_DIR/.env"
-echo "Mode: $MODE"
-echo "Bundled Traefik: ${INSTALL_TRAEFIK:-true}"
-echo "Jellyfin: http://$(hostname -s):${JELLYFIN_PORT}"
-echo "Radarr:   http://$(hostname -s):${RADARR_PORT}"
-echo "Sonarr:   http://$(hostname -s):${SONARR_PORT}"
-echo "Prowlarr: http://$(hostname -s):${PROWLARR_PORT}"
-if [ "${ENABLE_SABNZBD:-true}" = "true" ]; then
-  echo "SABnzbd:  http://$(hostname -s):${SABNZBD_PORT}"
-fi
-if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
-  echo "NZBDAV:   http://$(hostname -s):${NZBDAV_PORT}"
-fi
-if [ "${ENABLE_SEERR:-false}" = "true" ]; then
-  echo "Seerr:    http://$(hostname -s):${SEERR_PORT}"
-fi
-if [ "$MODE" = "traefik-private-dns" ] || [ "$MODE" = "traefik-public-dns" ]; then
-  echo "Traefik:  https://${TRAEFIK_DASHBOARD_HOST}"
-fi
-if [ "$MODE" = "tailscale-funnel" ]; then
-  echo "Funnel auto-config: ${AUTO_CONFIGURE_FUNNEL:-false}"
-  if [ "${FUNNEL_USE_PATHS:-false}" = "true" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
-    echo "Traefik front door: http://$(hostname -s):${TRAEFIK_FUNNEL_PORT:-8088}"
-  fi
-  echo "Funnel helper: ./scripts/configure-funnel.sh"
-  if [ "${AUTO_CONFIGURE_FUNNEL:-false}" = "true" ]; then
-    funnel_expected_summary
-  fi
-fi
-if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
-  echo "Bootstrap data applied from: $BOOTSTRAP_INPUT"
-fi
+print_install_summary

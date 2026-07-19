@@ -39,7 +39,14 @@ if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
   [ -f "$bootstrap_file" ] || fail "AUTO_APPLY_BOOTSTRAP_DATA=true but bootstrap data file is missing: $bootstrap_file"
 fi
 
+if [ "${MODE:-tailnet-only}" = "cloudflare-tunnel" ] && [ -z "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
+  fail "CLOUDFLARE_TUNNEL_TOKEN is required for MODE=cloudflare-tunnel"
+fi
+
 if [ "${MODE:-tailnet-only}" != "tailnet-only" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
+  if [ "${MODE:-tailnet-only}" = "traefik-public-dns" ] && [ "${TRAEFIK_ACME_CHALLENGE:-http}" = "cloudflare-dns" ] && [ -z "${CLOUDFLARE_DNS_API_TOKEN:-}" ]; then
+    fail "CLOUDFLARE_DNS_API_TOKEN is required for traefik-public-dns with TRAEFIK_ACME_CHALLENGE=cloudflare-dns"
+  fi
   mkdir -p "${TRAEFIK_CONFIG_DIR:-./config/traefik}"
   acme_file="${TRAEFIK_ACME_FILE:-${TRAEFIK_CONFIG_DIR:-./config/traefik}/acme.json}"
   if [ ! -f "$acme_file" ]; then

@@ -130,6 +130,41 @@ apply_bootstrap_defaults() {
   fi
 }
 
+generated_public_host() {
+  local suffix="$1"
+  printf '%s-%s.%s\n' "$(get_value DEVICE_NAME)" "$suffix" "$(get_value PUBLIC_DOMAIN)"
+}
+
+apply_public_dns_host_defaults() {
+  [ -n "$(get_value PUBLIC_DOMAIN)" ] || return 0
+  [ -n "$(get_value DEVICE_NAME)" ] || return 0
+
+  if legacy_or_empty "$(get_value JELLYFIN_HOST)" "jellyfin.tailnet.example"; then
+    set_kv JELLYFIN_HOST "$(generated_public_host jellyfin)"
+  fi
+  if legacy_or_empty "$(get_value RADARR_HOST)" "radarr.tailnet.example"; then
+    set_kv RADARR_HOST "$(generated_public_host movie)"
+  fi
+  if legacy_or_empty "$(get_value SONARR_HOST)" "sonarr.tailnet.example"; then
+    set_kv SONARR_HOST "$(generated_public_host tv)"
+  fi
+  if legacy_or_empty "$(get_value PROWLARR_HOST)" "prowlarr.tailnet.example"; then
+    set_kv PROWLARR_HOST "$(generated_public_host prowlarr)"
+  fi
+  if legacy_or_empty "$(get_value SABNZBD_HOST)" "sabnzbd.tailnet.example"; then
+    set_kv SABNZBD_HOST "$(generated_public_host sabnzbd)"
+  fi
+  if legacy_or_empty "$(get_value NZBDAV_HOST)" "nzbdav.tailnet.example"; then
+    set_kv NZBDAV_HOST "$(generated_public_host nzbdav)"
+  fi
+  if legacy_or_empty "$(get_value SEERR_HOST)" "seerr.tailnet.example"; then
+    set_kv SEERR_HOST "$(generated_public_host seerr)"
+  fi
+  if legacy_or_empty "$(get_value TRAEFIK_DASHBOARD_HOST)" "traefik.tailnet.example"; then
+    set_kv TRAEFIK_DASHBOARD_HOST "$(generated_public_host traefik)"
+  fi
+}
+
 prompt_value() {
   local key="$1"
   local prompt="$2"
@@ -145,6 +180,51 @@ prompt_value() {
   fi
 
   set_kv "$key" "$answer"
+}
+
+mode_from_selection() {
+  case "$1" in
+    1|tailnet-only) printf '%s\n' tailnet-only ;;
+    2|tailscale-funnel) printf '%s\n' tailscale-funnel ;;
+    3|cloudflare-tunnel) printf '%s\n' cloudflare-tunnel ;;
+    4|traefik-private-dns) printf '%s\n' traefik-private-dns ;;
+    5|traefik-public-dns) printf '%s\n' traefik-public-dns ;;
+    *) return 1 ;;
+  esac
+}
+
+prompt_mode() {
+  local current answer selected
+  current="$(get_value MODE)"
+  selected=""
+
+  if [ "$NON_INTERACTIVE" = true ]; then
+    answer="${MODE:-$current}"
+    if ! selected="$(mode_from_selection "$answer")"; then
+      echo "ERROR: invalid MODE: $answer" >&2
+      echo "Valid modes: tailnet-only, tailscale-funnel, cloudflare-tunnel, traefik-private-dns, traefik-public-dns" >&2
+      exit 1
+    fi
+    set_kv MODE "$selected"
+    return 0
+  fi
+
+  while true; do
+    echo "Deployment mode:"
+    echo "  1) Tailnet only (private Tailscale/local access)"
+    echo "  2) Tailscale Funnel (public *.ts.net access)"
+    echo "  3) Cloudflare Tunnel (public custom domain, no inbound ports)"
+    echo "  4) Traefik private DNS"
+    echo "  5) Traefik public DNS"
+    read -r -p "Select deployment mode [current: $current]: " answer
+    answer="${answer:-$current}"
+    if selected="$(mode_from_selection "$answer")"; then
+      set_kv MODE "$selected"
+      return 0
+    fi
+    echo "Invalid selection: $answer. Enter a number from 1 to 5."
+    echo
+  done
 }
 
 prompt_funnel_path() {
@@ -190,9 +270,24 @@ apply_mode_defaults() {
       set_kv TRAEFIK_FUNNEL_PORT 8088
       set_kv TRAEFIK_FUNNEL_CONFIG_DIR "${config_root}/traefik-funnel"
       ;;
+    cloudflare-tunnel)
+      set_kv INSTALL_TRAEFIK false
+      set_kv ENABLE_PUBLIC_HOSTNAMES true
+      set_kv AUTO_CONFIGURE_FUNNEL false
+      set_kv TAILSCALE_REQUIRED false
+      set_kv TRAEFIK_EXPOSE_ADMIN_APPS false
+      ;;
     traefik-private-dns|traefik-public-dns)
       set_kv INSTALL_TRAEFIK true
       set_kv AUTO_CONFIGURE_FUNNEL false
+      if [ "$mode" = "traefik-public-dns" ]; then
+        set_kv ENABLE_PUBLIC_HOSTNAMES true
+        set_kv TAILSCALE_REQUIRED false
+        set_kv TRAEFIK_ACME_CHALLENGE cloudflare-dns
+        set_kv TRAEFIK_EXPOSE_ADMIN_APPS false
+      else
+        set_kv TRAEFIK_EXPOSE_ADMIN_APPS true
+      fi
       ;;
     tailnet-only)
       set_kv AUTO_CONFIGURE_FUNNEL false
@@ -203,13 +298,16 @@ apply_mode_defaults() {
 apply_path_defaults
 apply_bootstrap_defaults
 
-prompt_value MODE "Deployment mode (tailnet-only|tailscale-funnel|traefik-private-dns|traefik-public-dns)"
+prompt_mode
 apply_mode_defaults
 
 if [ "$NON_INTERACTIVE" = false ]; then
   case "$(get_value MODE)" in
     tailscale-funnel)
       echo "Recommended Funnel defaults loaded: bundled Traefik in front of Funnel on local port 8088, one hostname on 443, Radarr at /radarr, Sonarr at /sonarr, Jellyfin off."
+      ;;
+    cloudflare-tunnel)
+      echo "Recommended Cloudflare Tunnel defaults loaded: custom public hostnames, no inbound ports, no Tailscale Funnel, no bundled Traefik."
       ;;
     traefik-private-dns|traefik-public-dns)
       echo "Recommended Traefik defaults loaded: bundled Traefik on, Funnel auto-config off."
@@ -221,6 +319,11 @@ prompt_value STACK_NAME "Stack name"
 prompt_value TZ "Timezone"
 prompt_value PUID "PUID"
 prompt_value PGID "PGID"
+if [ "$(get_value MODE)" = "traefik-public-dns" ] || [ "$(get_value MODE)" = "cloudflare-tunnel" ]; then
+  prompt_value PUBLIC_DOMAIN "Public base domain"
+  prompt_value DEVICE_NAME "Device name used in public hostnames"
+  apply_public_dns_host_defaults
+fi
 prompt_value DOWNLOADS_PATH "Downloads path"
 prompt_value MOVIES_PATH "Movies path"
 prompt_value TV_PATH "TV path"
@@ -233,6 +336,7 @@ fi
 prompt_value ENABLE_SABNZBD "Enable SABnzbd (true|false)"
 prompt_value ENABLE_NZBDAV "Enable NZBDAV (true|false)"
 prompt_value ENABLE_SEERR "Enable Seerr request portal (true|false)"
+prompt_value ENABLE_JELLYFIN_INTEL_GPU "Enable Jellyfin Intel iGPU hardware transcoding (/dev/dri) (true|false)"
 prompt_value JELLYFIN_HOST "Jellyfin hostname"
 prompt_value RADARR_HOST "Radarr hostname"
 prompt_value SONARR_HOST "Sonarr hostname"
@@ -242,7 +346,9 @@ prompt_value NZBDAV_HOST "NZBDAV hostname"
 prompt_value SEERR_HOST "Seerr hostname"
 
 MODE_VALUE="$(get_value MODE)"
-if [ "$MODE_VALUE" = "tailscale-funnel" ]; then
+if [ "$MODE_VALUE" = "cloudflare-tunnel" ]; then
+  prompt_value CLOUDFLARE_TUNNEL_TOKEN "Cloudflare Tunnel token for this device"
+elif [ "$MODE_VALUE" = "tailscale-funnel" ]; then
   prompt_value INSTALL_TRAEFIK "Install bundled Traefik in front of Funnel path routes (recommended: true)"
   prompt_value AUTO_CONFIGURE_FUNNEL "Auto-configure Tailscale Funnel during install (recommended: true)"
   prompt_value FUNNEL_USE_PATHS "Use one hostname with path-based Funnel URLs (recommended: true)"
@@ -277,6 +383,13 @@ elif [ "$MODE_VALUE" = "traefik-private-dns" ] || [ "$MODE_VALUE" = "traefik-pub
   prompt_value TRAEFIK_HTTPS_PORT "Traefik HTTPS port"
   prompt_value TRAEFIK_CERTRESOLVER "Traefik certificate resolver name"
   prompt_value TRAEFIK_ACME_EMAIL "Traefik ACME email"
+  if [ "$MODE_VALUE" = "traefik-public-dns" ]; then
+    prompt_value TRAEFIK_ACME_CHALLENGE "Traefik ACME challenge (recommended: cloudflare-dns)"
+    if [ "$(get_value TRAEFIK_ACME_CHALLENGE)" = "cloudflare-dns" ]; then
+      prompt_value CLOUDFLARE_DNS_API_TOKEN "Cloudflare DNS API token with Zone:DNS:Edit for the domain"
+    fi
+    prompt_value TRAEFIK_EXPOSE_ADMIN_APPS "Expose Prowlarr/SABnzbd/NZBDAV hostnames too (recommended: false)"
+  fi
   prompt_value TRAEFIK_DASHBOARD_HOST "Traefik dashboard hostname"
   prompt_value PROXY_NETWORK "Traefik proxy network"
 else

@@ -26,11 +26,13 @@ This assumes another Traefik instance already exists on the host and is attached
 - `tailnet-only`: no Traefik overlay
 - `tailscale-funnel`: no Traefik required; public access comes from Tailscale Funnel instead
 - `traefik-private-dns`: Traefik enabled, intended for private/split DNS names
-- `traefik-public-dns`: Traefik enabled, intended for public DNS and TLS
+- `traefik-public-dns`: Traefik enabled, intended for public DNS and TLS. With `PUBLIC_DOMAIN=myallbox.com` and `DEVICE_NAME=ethan`, configure.sh generates `ethan-movie.myallbox.com`, `ethan-tv.myallbox.com`, and `ethan-seerr.myallbox.com`.
 
 ## Operational notes
 
 - Tailscale remains host-level; Traefik does not replace Tailnet access.
 - SSH access remains host-level and unaffected.
 - For public Radarr/Sonarr exposure on hosts without port forwarding, prefer `tailscale-funnel` over Traefik.
-- Bundled Traefik uses Let's Encrypt HTTP challenge, so ports 80 and 443 must be reachable for public certificate issuance.
+- Bundled Traefik uses Let's Encrypt HTTP challenge by default, so ports 80 and 443 must be reachable for public certificate issuance.
+- For Cloudflare-backed public DNS, set `TRAEFIK_ACME_CHALLENGE=cloudflare-dns` and `CLOUDFLARE_DNS_API_TOKEN` in the local `.env`. The installer adds `compose.cloudflare-dns.yml`, which switches Traefik to DNS-01 validation with Cloudflare.
+- Keep `TRAEFIK_EXPOSE_ADMIN_APPS=false` for family-facing installs so only Jellyfin, Radarr, Sonarr, and Seerr are routed publicly by default; Prowlarr, SABnzbd, and NZBDAV stay private unless explicitly enabled.

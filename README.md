@@ -72,8 +72,54 @@ Yes: the installer asks configuration questions during setup and writes the answ
 
 - `tailnet-only`: publish app ports on the host and access them only over Tailscale.
 - `tailscale-funnel`: keep the machine on Tailscale but expose selected apps publicly through Tailscale Funnel without router port forwarding.
+- `cloudflare-tunnel`: use your own Cloudflare domain names without static IPs, DDNS, inbound ports, or router port forwarding.
 - `traefik-private-dns`: add Traefik labels and hostnames for friendly private DNS names.
-- `traefik-public-dns`: same as above, but intended for public DNS and TLS on hosts that can actually receive 80/443.
+- `traefik-public-dns`: same as above, but intended for public DNS and TLS on hosts that can actually receive 80/443. The installer can generate per-device hostnames like `ethan-tv.myallbox.com`, `ethan-movie.myallbox.com`, and `ethan-seerr.myallbox.com`.
+
+## Cloudflare Tunnel mode
+
+Use `cloudflare-tunnel` when the boxes should use your domain but may live on random networks, changing public IPs, CGNAT, or routers you do not control.
+
+For a device named `ethan` and `PUBLIC_DOMAIN=myallbox.com`, the generated public hostnames are:
+- Radarr: `https://ethan-movie.myallbox.com`
+- Sonarr: `https://ethan-tv.myallbox.com`
+- Seerr: `https://ethan-seerr.myallbox.com`
+
+Recommended `.env` values:
+- `MODE=cloudflare-tunnel`
+- `PUBLIC_DOMAIN=myallbox.com`
+- `DEVICE_NAME=ethan`
+- `CLOUDFLARE_TUNNEL_TOKEN=<local Cloudflare Tunnel token, do not commit>`
+
+Create one Cloudflare Tunnel per box in Cloudflare Zero Trust, then add Public Hostname routes for that tunnel:
+- `ethan-movie.myallbox.com` -> `http://radarr:7878`
+- `ethan-tv.myallbox.com` -> `http://sonarr:8989`
+- `ethan-seerr.myallbox.com` -> `http://seerr:5055`
+
+The stack starts `cloudflared` as a Compose service. It connects outbound to Cloudflare, so no public IP, DDNS, router port forwarding, or inbound 80/443 is required. Tailscale can still stay on the host for private SSH/admin access.
+
+## Cloudflare domain mode
+
+Use `traefik-public-dns` only when the host can receive inbound public traffic directly. For uncontrolled/changing networks, prefer `cloudflare-tunnel` instead.
+
+For a device named `ethan` and `PUBLIC_DOMAIN=myallbox.com`, the generated public hostnames are:
+- Radarr: `https://ethan-movie.myallbox.com`
+- Sonarr: `https://ethan-tv.myallbox.com`
+- Seerr: `https://ethan-seerr.myallbox.com`
+
+For the next box, set only `DEVICE_NAME`, for example `DEVICE_NAME=bedroom`, and the same pattern becomes `bedroom-tv.myallbox.com`, `bedroom-movie.myallbox.com`, and `bedroom-seerr.myallbox.com`.
+
+Recommended `.env` values:
+- `MODE=traefik-public-dns`
+- `PUBLIC_DOMAIN=myallbox.com`
+- `DEVICE_NAME=ethan`
+- `TRAEFIK_ACME_CHALLENGE=cloudflare-dns`
+- `CLOUDFLARE_DNS_API_TOKEN=<local Cloudflare token, do not commit>`
+- `TRAEFIK_EXPOSE_ADMIN_APPS=false`
+
+The Cloudflare token needs permission to edit DNS for the zone so Traefik can complete Let's Encrypt DNS-01 validation. With DNS-01, Traefik can get certificates without relying on Tailscale DNS names.
+
+DNS note: a Cloudflare wildcard record such as `*.myallbox.com` can cover the names, but DNS wildcards route every matching name to the same target. If later boxes live behind different public IPs/tunnels, create explicit records for each hostname or use a device-scoped naming shape such as `tv.ethan.myallbox.com` with `*.ethan.myallbox.com` per box. This repo still supports the requested `ethan-tv.myallbox.com` style hostnames.
 
 ## Tailscale Funnel mode
 
@@ -146,11 +192,15 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `compose.yml` - base app stack
 - `compose.traefik.yml` - Traefik labels shared by both Traefik setups
 - `compose.traefik-bundled.yml` - bundled Traefik service
+- `compose.jellyfin-intel-gpu.yml` - optional `/dev/dri` pass-through for Jellyfin Intel iGPU transcoding
+- `compose.cloudflare-dns.yml` - Cloudflare DNS-01 ACME override for public-domain installs
+- `compose.cloudflare-tunnel.yml` - Cloudflare Tunnel service for custom-domain ingress without inbound ports
 - `compose.traefik-external.yml` - external proxy network for an existing Traefik host
 - `compose.funnel-traefik.yml` - Traefik path-routing labels for Funnel mode
 - `compose.funnel-traefik-bundled.yml` - bundled Traefik service bound to a local high port for Funnel mode
 - `.env.example` - template for local `.env`
 - `docs/nzbdav.md` - NZBDAV-specific setup, privacy, and path notes
+- `docs/cloudflare-tunnel.md` - custom-domain Cloudflare Tunnel setup for portable boxes on uncontrolled networks
 - `scripts/bootstrap.sh` - one-liner entrypoint
 - `scripts/prepare-host-debian.sh` - optional Debian host prep for Docker, Compose, and Tailscale
 - `scripts/install.sh` - orchestrates setup
@@ -177,9 +227,10 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `scripts/prepare-host-debian.sh` is Debian-only and optional; use it on fresh machines that still need Docker/Tailscale installed.
 - Tailscale stays on the host; SSH and other host access remain independent of this stack.
 - For public Radarr/Sonarr exposure, use strong app credentials.
-- Tailscale Funnel uses your tailnet's `*.ts.net` naming, not your own custom public CNAMEs.
+- Tailscale Funnel uses your tailnet's `*.ts.net` naming, not your own custom public CNAMEs. Use `cloudflare-tunnel` for custom Cloudflare names like `ethan-tv.myallbox.com` when you do not control public IPs/routers.
 - With NZBDAV enabled, Sonarr and Radarr still use a SAB-compatible download-client integration, but the client host should be `nzbdav` on port `3000`.
 - Seerr is enabled by `ENABLE_SEERR=true`, stores config in `${SEERR_CONFIG}`, listens locally on `${SEERR_PORT:-5055}`, and is the recommended family-facing request UI.
+- Jellyfin Intel iGPU pass-through is opt-in with `ENABLE_JELLYFIN_INTEL_GPU=true`; leave it off on hosts without `/dev/dri`.
 - Sonarr's library root folder inside the container is `/tv`; Radarr's library root folder is `/movies`.
 - NZBDAV completed downloads live under `/downloads/nzbdav-completed/<category>` inside the containers, backed by `${DOWNLOADS_PATH}/nzbdav-completed/<category>` on the host.
 
