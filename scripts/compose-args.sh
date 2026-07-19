@@ -42,6 +42,9 @@ build_compose_args() {
   fi
   if [ "${ENABLE_SEERR:-false}" = "true" ]; then
     PROFILES+=(--profile seerr)
+    if funnel_path_mode_enabled; then
+      PROFILES+=(--profile seerr-web)
+    fi
   fi
   if [ "${ENABLE_JELLYFIN_INTEL_GPU:-false}" = "true" ]; then
     COMPOSE_FILES+=(-f compose.jellyfin-intel-gpu.yml)

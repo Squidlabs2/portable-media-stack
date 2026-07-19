@@ -125,7 +125,7 @@ services:
       - ${SEERR_CONFIG:-./config/seerr}:/app/config
 
   seerr-web:
-    profiles: ["seerr"]
+    profiles: ["seerr-web"]
     image: nginx:1.27-alpine
     container_name: ${STACK_NAME:-portable-media-stack}_seerr_web
     restart: unless-stopped
