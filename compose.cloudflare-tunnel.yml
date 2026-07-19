@@ -3,12 +3,17 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: ${STACK_NAME:-portable-media-stack}_cloudflared
     restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
     command:
-      - tunnel
-      - --no-autoupdate
-      - run
-      - --token
-      - ${CLOUDFLARE_TUNNEL_TOKEN}
+      - exec cloudflared tunnel --no-autoupdate run --token "$$(cat /run/secrets/cloudflare_tunnel_token)"
+    secrets:
+      - cloudflare_tunnel_token
     networks:
       - media
       - egress
+
+secrets:
+  cloudflare_tunnel_token:
+    file: ${CLOUDFLARE_TUNNEL_TOKEN_FILE:-./secrets/cloudflare-tunnel-token}

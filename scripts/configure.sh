@@ -253,6 +253,7 @@ apply_mode_defaults() {
     tailscale-funnel)
       set_kv INSTALL_TRAEFIK true
       set_kv ENABLE_PUBLIC_HOSTNAMES false
+      set_kv TAILSCALE_REQUIRED true
       set_kv AUTO_CONFIGURE_FUNNEL true
       set_kv FUNNEL_USE_PATHS true
       set_kv FUNNEL_RADARR true
@@ -286,10 +287,15 @@ apply_mode_defaults() {
         set_kv TRAEFIK_ACME_CHALLENGE cloudflare-dns
         set_kv TRAEFIK_EXPOSE_ADMIN_APPS false
       else
+        set_kv ENABLE_PUBLIC_HOSTNAMES false
+        set_kv TAILSCALE_REQUIRED true
         set_kv TRAEFIK_EXPOSE_ADMIN_APPS true
       fi
       ;;
     tailnet-only)
+      set_kv INSTALL_TRAEFIK false
+      set_kv ENABLE_PUBLIC_HOSTNAMES false
+      set_kv TAILSCALE_REQUIRED true
       set_kv AUTO_CONFIGURE_FUNNEL false
       ;;
   esac
@@ -347,7 +353,8 @@ prompt_value SEERR_HOST "Seerr hostname"
 
 MODE_VALUE="$(get_value MODE)"
 if [ "$MODE_VALUE" = "cloudflare-tunnel" ]; then
-  prompt_value CLOUDFLARE_TUNNEL_TOKEN "Cloudflare Tunnel token for this device"
+  prompt_value CLOUDFLARE_TUNNEL_TOKEN_FILE "Cloudflare Tunnel token file path"
+  prompt_value CLOUDFLARE_TUNNEL_TOKEN "Cloudflare Tunnel token to write locally if the token file does not exist (leave blank to skip)"
 elif [ "$MODE_VALUE" = "tailscale-funnel" ]; then
   prompt_value INSTALL_TRAEFIK "Install bundled Traefik in front of Funnel path routes (recommended: true)"
   prompt_value AUTO_CONFIGURE_FUNNEL "Auto-configure Tailscale Funnel during install (recommended: true)"

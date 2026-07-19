@@ -3,6 +3,7 @@
 .env.*.local
 *.log
 config/
+secrets/
 .docker/
 bootstrap-data/local/
 scripts/__pycache__/

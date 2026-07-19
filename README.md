@@ -89,7 +89,9 @@ Recommended `.env` values:
 - `MODE=cloudflare-tunnel`
 - `PUBLIC_DOMAIN=myallbox.com`
 - `DEVICE_NAME=ethan`
-- `CLOUDFLARE_TUNNEL_TOKEN=<local Cloudflare Tunnel token, do not commit>`
+- `CLOUDFLARE_TUNNEL_TOKEN_FILE=./secrets/cloudflare-tunnel-token`
+
+Paste the Cloudflare Tunnel token into the local token file on the target box, or paste it into the installer when prompted so preflight can write that ignored local file for you. Do not commit or paste the token in chat.
 
 Create one Cloudflare Tunnel per box in Cloudflare Zero Trust, then add Public Hostname routes for that tunnel:
 - `ethan-movie.myallbox.com` -> `http://radarr:7878`

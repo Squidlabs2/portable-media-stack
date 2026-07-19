@@ -138,12 +138,20 @@ print_local_urls() {
   fi
 }
 
+print_public_app_urls() {
+  printf 'Public URLs: https://%s, https://%s' "$RADARR_HOST" "$SONARR_HOST"
+  if [ "${ENABLE_SEERR:-false}" = "true" ]; then
+    printf ', https://%s' "$SEERR_HOST"
+  fi
+  printf '\n'
+}
+
 print_traefik_summary() {
   [ "$MODE" = "traefik-private-dns" ] || [ "$MODE" = "traefik-public-dns" ] || return 0
 
   echo "Traefik:  https://${TRAEFIK_DASHBOARD_HOST}"
   if [ "$MODE" = "traefik-public-dns" ]; then
-    echo "Public URLs: https://${RADARR_HOST}, https://${SONARR_HOST}, https://${SEERR_HOST}"
+    print_public_app_urls
   fi
 }
 
@@ -164,8 +172,12 @@ print_cloudflare_tunnel_summary() {
   [ "$MODE" = "cloudflare-tunnel" ] || return 0
 
   echo "Cloudflare Tunnel: enabled"
-  echo "Public URLs: https://${RADARR_HOST}, https://${SONARR_HOST}, https://${SEERR_HOST}"
-  echo "Cloudflare routes should point to internal services: ${RADARR_HOST} -> http://radarr:7878, ${SONARR_HOST} -> http://sonarr:8989, ${SEERR_HOST} -> http://seerr:5055"
+  print_public_app_urls
+  printf 'Cloudflare routes should point to internal services: %s -> http://radarr:7878, %s -> http://sonarr:8989' "$RADARR_HOST" "$SONARR_HOST"
+  if [ "${ENABLE_SEERR:-false}" = "true" ]; then
+    printf ', %s -> http://seerr:5055' "$SEERR_HOST"
+  fi
+  printf '\n'
 }
 
 print_next_steps() {
@@ -206,7 +218,11 @@ print_next_steps() {
       echo "  4) Point your private DNS names at this host, then test the Traefik URLs above."
       ;;
     traefik-public-dns)
-      echo "  4) Confirm public DNS points at this host and ports 80/443 are reachable."
+      if [ "${TRAEFIK_ACME_CHALLENGE:-http}" = "cloudflare-dns" ]; then
+        echo "  4) Confirm public DNS points at this host; DNS-01 can issue certs without inbound 80/443, but users still need a reachable route."
+      else
+        echo "  4) Confirm public DNS points at this host and ports 80/443 are reachable."
+      fi
       echo "  5) Watch Traefik issue certificates, then test the public URLs above."
       ;;
   esac

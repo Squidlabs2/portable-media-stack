@@ -13,11 +13,11 @@ services:
       - --entrypoints.websecure.http.tls.certresolver=${TRAEFIK_CERTRESOLVER}
       - --entrypoints.websecure.http.tls.domains[0].main=${PUBLIC_DOMAIN}
       - --entrypoints.websecure.http.tls.domains[0].sans=*.${PUBLIC_DOMAIN}
-      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}
-      - --certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json
-      - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
-      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare
-      - --certificatesresolvers.letsencrypt.acme.dnschallenge.delaybeforecheck=0
+      - --certificatesresolvers.${TRAEFIK_CERTRESOLVER}.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.${TRAEFIK_CERTRESOLVER}.acme.storage=/etc/traefik/acme/acme.json
+      - --certificatesresolvers.${TRAEFIK_CERTRESOLVER}.acme.dnschallenge=true
+      - --certificatesresolvers.${TRAEFIK_CERTRESOLVER}.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.${TRAEFIK_CERTRESOLVER}.acme.dnschallenge.delaybeforecheck=0
       - --ping=true
     environment:
       - CF_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}

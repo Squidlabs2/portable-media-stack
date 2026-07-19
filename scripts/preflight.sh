@@ -39,8 +39,17 @@ if [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ]; then
   [ -f "$bootstrap_file" ] || fail "AUTO_APPLY_BOOTSTRAP_DATA=true but bootstrap data file is missing: $bootstrap_file"
 fi
 
-if [ "${MODE:-tailnet-only}" = "cloudflare-tunnel" ] && [ -z "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
-  fail "CLOUDFLARE_TUNNEL_TOKEN is required for MODE=cloudflare-tunnel"
+if [ "${MODE:-tailnet-only}" = "cloudflare-tunnel" ]; then
+  token_file="${CLOUDFLARE_TUNNEL_TOKEN_FILE:-./secrets/cloudflare-tunnel-token}"
+  if [ ! -s "$token_file" ] && [ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
+    token_dir="${token_file%/*}"
+    [ "$token_dir" != "$token_file" ] || token_dir="."
+    mkdir -p "$token_dir"
+    printf '%s' "$CLOUDFLARE_TUNNEL_TOKEN" > "$token_file"
+    chmod 600 "$token_file"
+    echo "Wrote Cloudflare Tunnel token file: $token_file"
+  fi
+  [ -s "$token_file" ] || fail "Cloudflare Tunnel token file is required for MODE=cloudflare-tunnel: $token_file"
 fi
 
 if [ "${MODE:-tailnet-only}" != "tailnet-only" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then

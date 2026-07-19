@@ -31,8 +31,10 @@ In Cloudflare Zero Trust, create one tunnel per box and save that box's tunnel t
 MODE=cloudflare-tunnel
 PUBLIC_DOMAIN=myallbox.com
 DEVICE_NAME=ethan
-CLOUDFLARE_TUNNEL_TOKEN=<secret tunnel token>
+CLOUDFLARE_TUNNEL_TOKEN_FILE=./secrets/cloudflare-tunnel-token
 ```
+
+Paste the token into that ignored local file, or paste it into the installer prompt so preflight writes the file with `0600` permissions. The Compose service reads the token through a mounted secret file instead of placing the token directly in the container command.
 
 Then add Public Hostname routes for that tunnel:
 
