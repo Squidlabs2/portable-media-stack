@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 DEFAULT_BOOTSTRAP_LIBRARY_DIR = Path.home() / ".local/share/portable-media-stack/bootstrap-data"
 
 PROWLARR_ALLOWED_KEYS = {

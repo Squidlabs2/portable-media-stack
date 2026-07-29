@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/fetch-bootstrap-data.sh <user@source-host> [remote-path] [local-path]
+Usage: ./scripts/bootstrap-data/fetch-bootstrap-data.sh <user@source-host> [remote-path] [local-path]
 
 Defaults:
   remote-path: ~/.local/share/portable-media-stack/bootstrap-data/latest-bootstrap-data.json

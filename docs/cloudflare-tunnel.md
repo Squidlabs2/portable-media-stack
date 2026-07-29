@@ -4,6 +4,10 @@ Use `MODE=cloudflare-tunnel` when a portable box should use your own domain but 
 
 Cloudflare Tunnel works through an outbound `cloudflared` connection, so the box does not need inbound 80/443, DDNS, or router port forwarding.
 
+The fresh-host installer still enrolls every box in Tailscale. Tailscale is for private SSH and administration; Cloudflare Tunnel is the default public ingress.
+
+When entered through the setup wizard, the token is written to the ignored token file and cleared from `.env` before Compose starts.
+
 ## Hostname pattern
 
 With:
@@ -50,4 +54,4 @@ Optional/private services can be added later, but do not expose Prowlarr, SABnzb
 
 The installer adds `compose.cloudflare-tunnel.yml`, which starts a `cloudflared` container on both the internal `media` network and outbound `egress` network. That lets Cloudflare reach internal service names like `radarr`, `sonarr`, and `seerr`, while `cloudflared` can still make outbound connections to Cloudflare.
 
-Tailscale can still stay installed on the host for private SSH/admin access, but Cloudflare Tunnel replaces Tailscale Funnel for public custom-domain ingress.
+Tailscale remains required on every host for private SSH/admin access, but Cloudflare Tunnel replaces Tailscale Funnel for public custom-domain ingress.

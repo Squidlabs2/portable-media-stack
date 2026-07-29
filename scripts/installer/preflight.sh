@@ -47,6 +47,18 @@ if [ "${MODE:-tailnet-only}" = "cloudflare-tunnel" ]; then
     mkdir -p "$token_dir"
     printf '%s' "$CLOUDFLARE_TUNNEL_TOKEN" > "$token_file"
     chmod 644 "$token_file"
+    if [ -f ./.env ]; then
+      python3 - ./.env <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+path.write_text("\n".join(
+    "CLOUDFLARE_TUNNEL_TOKEN=" if line.startswith("CLOUDFLARE_TUNNEL_TOKEN=") else line
+    for line in path.read_text().splitlines()
+) + "\n")
+PY
+    fi
     echo "Wrote Cloudflare Tunnel token file: $token_file"
   fi
   [ -s "$token_file" ] || fail "Cloudflare Tunnel token file is required for MODE=cloudflare-tunnel: $token_file"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 if [ -f ./.env ]; then
@@ -11,4 +11,4 @@ if [ -f ./.env ]; then
   set +a
 fi
 
-exec python3 ./scripts/bootstrap-data.py apply "$@"
+exec python3 ./scripts/bootstrap-data/bootstrap-data.py apply "$@"

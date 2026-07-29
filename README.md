@@ -7,30 +7,35 @@ Goals:
 - GitHub as the source of truth
 - one-line bootstrap support
 - machine-specific config kept local in `.env`
-- Tailscale-first networking with optional public exposure modes
+- Cloudflare Tunnel public ingress with required Tailscale remote administration
 - optional bundled Traefik for self-contained installs on hosts that can receive 80/443
 
 ## Quick start
 
-Recommended install:
+Existing Debian host with Docker and Tailscale already configured:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh)
 ```
 
-Fresh Debian host prep + install:
+Fresh Debian host — recommended one-command install:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host
+sudo apt-get update && sudo apt-get install -y curl && \
+  bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host
 ```
 
-That Debian host prep path will:
+The initial `curl` install is the only bootstrap prerequisite on a minimal Debian image; the guided installer handles the remaining host and stack setup.
+
+That guided path will:
 - run `apt-get update`
 - run `apt-get upgrade -y` by default
 - install `curl`, `git`, `bash`, `python3`, and apt/GPG prerequisites
 - install Docker Engine and the Docker Compose plugin
 - install Tailscale and start `tailscaled`
 - add the current non-root user to the `docker` group
+- require enrollment into your Tailscale tailnet, using an auth key or browser login
+- refresh Docker group access before starting the installer
 - then continue into the normal stack installer
 
 Useful host-prep variants:
@@ -58,6 +63,15 @@ git clone git@github.com:Squidlabs2/portable-media-stack.git
 cd portable-media-stack
 ./scripts/install.sh
 ```
+
+On a brand-new install, the setup wizard starts with four simple choices:
+
+1. Private Tailscale/LAN media box.
+2. Family request box using Tailscale Funnel paths for Radarr, Sonarr, and Seerr.
+3. Portable custom-domain box using Cloudflare Tunnel (the recommended default).
+4. Full custom setup for every deployment and service option.
+
+The first three presets use NZBDAV and Seerr by default, keep legacy SABnzbd off, and leave bootstrap-data auto-apply off. Every preset keeps the host enrolled in Tailscale for SSH and private administration; Cloudflare Tunnel is the default public ingress. Run `./squid-media configure` later when you want to adjust every option.
 
 Manual two-step fresh Debian flow:
 
@@ -91,14 +105,14 @@ Recommended `.env` values:
 - `DEVICE_NAME=ethan`
 - `CLOUDFLARE_TUNNEL_TOKEN_FILE=./secrets/cloudflare-tunnel-token`
 
-Paste the Cloudflare Tunnel token into the local token file on the target box, or paste it into the installer when prompted so preflight can write that ignored local file for you. Do not commit or paste the token in chat.
+Paste the Cloudflare Tunnel token into the local token file on the target box, or paste it into the installer when prompted so preflight can write that ignored local file for you and clear the raw value from `.env`. Do not commit or paste the token in chat.
 
 Create one Cloudflare Tunnel per box in Cloudflare Zero Trust, then add Public Hostname routes for that tunnel:
 - `ethan-movie.myallbox.com` -> `http://radarr:7878`
 - `ethan-tv.myallbox.com` -> `http://sonarr:8989`
 - `ethan-seerr.myallbox.com` -> `http://seerr:5055`
 
-The stack starts `cloudflared` as a Compose service. It connects outbound to Cloudflare, so no public IP, DDNS, router port forwarding, or inbound 80/443 is required. Tailscale can still stay on the host for private SSH/admin access.
+The stack starts `cloudflared` as a Compose service. It connects outbound to Cloudflare, so no public IP, DDNS, router port forwarding, or inbound 80/443 is required. Tailscale remains required on every host for private SSH and administration; it is not used for the public Cloudflare routes.
 
 ## Cloudflare domain mode
 
@@ -158,7 +172,7 @@ Recommended defaults for your use case:
 - `INSTALL_TRAEFIK=true`
 - `TRAEFIK_FUNNEL_PORT=8088`
 
-The repo includes `scripts/configure-funnel.sh`, which can apply the Funnel config later.
+The repo includes `scripts/ingress/configure-funnel.sh`, which can apply the Funnel config later.
 When Funnel auto-config is enabled, the installer now prints the expected public mapping and the Funnel helper/status output prints likely public URLs based on the machine's tailnet DNS name.
 
 Path-based Funnel URLs look like:
@@ -189,6 +203,21 @@ For the current test machine this resolved as:
 
 Bundled Traefik is the default for Traefik modes because it makes fresh-machine installs easier.
 
+## Squid Media management CLI
+
+After the first install, use the repository-local CLI instead of remembering the resolved Compose overlays and profiles:
+
+```bash
+./squid-media status
+./squid-media start
+./squid-media stop sonarr
+./squid-media logs --follow seerr
+./squid-media funnel-status
+./squid-media update
+```
+
+`./squid-media configure` updates the local `.env`, and `./squid-media bootstrap-apply --input <file>` delegates to the existing bootstrap-data importer. The CLI deliberately has no destructive `destroy` or `reset` command; use the documented clean-reset workflow when you explicitly want to remove a deployment.
+
 ## Files
 
 - `compose.yml` - base app stack
@@ -203,28 +232,23 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
 - `.env.example` - template for local `.env`
 - `docs/nzbdav.md` - NZBDAV-specific setup, privacy, and path notes
 - `docs/cloudflare-tunnel.md` - custom-domain Cloudflare Tunnel setup for portable boxes on uncontrolled networks
+- `scripts/README.md` - script map and stable entrypoints
 - `scripts/bootstrap.sh` - one-liner entrypoint
-- `scripts/prepare-host-debian.sh` - optional Debian host prep for Docker, Compose, and Tailscale
-- `scripts/install.sh` - orchestrates setup
-- `scripts/configure.sh` - generates `.env`
-- `scripts/configure-arr-url-bases.sh` - sets Radarr/Sonarr UrlBase for path-based Funnel URLs
-- `scripts/configure-funnel.sh` - applies Tailscale Funnel config from `.env`
-- `scripts/write-funnel-traefik-config.sh` - generates the bundled Traefik dynamic config used behind Funnel path routes
-- `scripts/export-bootstrap-data.sh` - exports reusable indexer/downloader seed data from a live stack
-- `scripts/fetch-bootstrap-data.sh` - pulls the latest saved bootstrap artifact from another machine over SSH
-- `scripts/apply-bootstrap-data.sh` - applies reusable indexer/downloader seed data to a fresh install
-- `scripts/configure-sab-paths.sh` - normalizes SABnzbd download directories to the mounted `/downloads` path and restarts SAB if a legacy default is detected
-- `scripts/configure-nzbdav-paths.sh` - creates NZBDAV completed category directories under the shared `/downloads` mount
-- `scripts/preflight.sh` - validates prerequisites and prepares Traefik ACME storage
-- `scripts/create-networks.sh` - creates external Docker networks when needed
-- `scripts/update.sh` - pulls repo and refreshes containers
+- `scripts/prepare-host-debian.sh` - optional Debian host prep wrapper for Docker, Compose, and Tailscale
+- `scripts/install.sh`, `scripts/update.sh`, `scripts/configure.sh` - stable install/update/configure entrypoints
+- `scripts/installer/` - setup wizard, preflight, network setup, Compose resolution, and install/update implementations
+- `scripts/ingress/` - Funnel, Traefik, Seerr proxy, and Arr URL-base helpers
+- `scripts/services/` - SABnzbd and NZBDAV path helpers
+- `scripts/bootstrap-data/` - export, fetch, and apply tooling plus the Python implementation
+- `scripts/host/` - host-specific preparation implementations
+- `squid-media` - safe repository-local management CLI
 
 ## Notes
 
 - Real secrets and machine-specific values stay out of git.
 - `.env` is created locally during install.
 - `bootstrap-data/local/bootstrap-data.json` is local-only and ignored by git because it can contain API keys and indexer credentials.
-- `./scripts/export-bootstrap-data.sh` also refreshes a reusable bootstrap library under `${HOME}/.local/share/portable-media-stack/bootstrap-data/`, including `latest-bootstrap-data.json` plus timestamped history copies for future machines.
+- `./scripts/bootstrap-data/export-bootstrap-data.sh` also refreshes a reusable bootstrap library under `${HOME}/.local/share/portable-media-stack/bootstrap-data/`, including `latest-bootstrap-data.json` plus timestamped history copies for future machines.
 - `bootstrap.sh` is intentionally small; all real logic lives in versioned repo scripts.
 - `scripts/prepare-host-debian.sh` is Debian-only and optional; use it on fresh machines that still need Docker/Tailscale installed.
 - Tailscale stays on the host; SSH and other host access remain independent of this stack.
@@ -251,7 +275,7 @@ Bundled Traefik is the default for Traefik modes because it makes fresh-machine 
    - `DOWNLOADS_PATH=$HOME/downloads`
    - `MOVIES_PATH=$HOME/media/movies`
    - `TV_PATH=$HOME/media/tv`
-5. If you exported bootstrap data from another machine, you can either fetch it with `./scripts/fetch-bootstrap-data.sh user@source-host` or restore the latest saved copy under `${HOME}/.local/share/portable-media-stack/bootstrap-data/`, then enable:
+5. If you exported bootstrap data from another machine, you can either fetch it with `./scripts/bootstrap-data/fetch-bootstrap-data.sh user@source-host` or restore the latest saved copy under `${HOME}/.local/share/portable-media-stack/bootstrap-data/`, then enable:
    - `AUTO_APPLY_BOOTSTRAP_DATA=true`
    - `BOOTSTRAP_DATA_FILE=${HOME}/.local/share/portable-media-stack/bootstrap-data/latest-bootstrap-data.json`
 
@@ -262,7 +286,7 @@ If you want a clean new install but want it to reuse your current Prowlarr index
 1. On the current working machine, run:
 
 ```bash
-./scripts/export-bootstrap-data.sh
+./scripts/bootstrap-data/export-bootstrap-data.sh
 ```
 
 2. The export refreshes both:
@@ -281,7 +305,7 @@ and also writes a timestamped archive copy under:
 3. On the new machine, the easiest transfer path is:
 
 ```bash
-./scripts/fetch-bootstrap-data.sh user@source-host
+./scripts/bootstrap-data/fetch-bootstrap-data.sh user@source-host
 ```
 
 That copies the saved `latest-bootstrap-data.json` from the source host into `./bootstrap-data/local/bootstrap-data.json` on the new machine.

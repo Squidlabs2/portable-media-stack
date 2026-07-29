@@ -124,7 +124,7 @@ else
   BOOTSTRAP_SOURCE_DIR=$(download_repo_archive)
   cd "$BOOTSTRAP_SOURCE_DIR"
 
-  ./scripts/prepare-host-debian.sh "${PREPARE_HOST_ARGS[@]}"
+  ./scripts/host/prepare-debian.sh "${PREPARE_HOST_ARGS[@]}"
   HOST_PREP_DONE=true
 
   if [ -e "$INSTALL_DIR" ] && [ ! -d "$INSTALL_DIR/.git" ]; then
@@ -139,7 +139,29 @@ else
 fi
 
 if [ "$PREPARE_HOST" = true ] && [ "$HOST_PREP_DONE" != true ] && have_cmd git; then
-  ./scripts/prepare-host-debian.sh "${PREPARE_HOST_ARGS[@]}"
+  ./scripts/host/prepare-debian.sh "${PREPARE_HOST_ARGS[@]}"
 fi
 
-exec ./scripts/install.sh "${INSTALL_ARGS[@]}"
+run_installer() {
+  if docker info >/dev/null 2>&1; then
+    exec ./scripts/install.sh "${INSTALL_ARGS[@]}"
+  fi
+
+  local docker_members installer_command quoted_arg
+  docker_members=$(getent group docker 2>/dev/null | cut -d: -f4 || true)
+  if [ "$(id -u)" -ne 0 ] && [ -n "${USER:-}" ] && [[ ",$docker_members," == *",${USER},"* ]] && have_cmd sg; then
+    echo "Refreshing this shell with Docker group access for the installer."
+    printf -v installer_command 'cd %q && exec ./scripts/install.sh' "$INSTALL_DIR"
+    for quoted_arg in "${INSTALL_ARGS[@]}"; do
+      printf -v quoted_arg ' %q' "$quoted_arg"
+      installer_command+="$quoted_arg"
+    done
+    exec sg docker -c "$installer_command"
+  fi
+
+  echo "Docker is installed but unavailable to this shell." >&2
+  echo "Log out and back in, then run: cd $INSTALL_DIR && ./scripts/install.sh" >&2
+  exit 1
+}
+
+run_installer

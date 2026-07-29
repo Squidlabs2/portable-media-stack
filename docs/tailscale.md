@@ -38,4 +38,4 @@ https://ethan.wolverine-crocodile.ts.net/sonarr
 https://ethan.wolverine-crocodile.ts.net/seerr
 ```
 
-If Funnel status shows multiple hostnames, test the specific hostname printed as the "Available on the internet" URL after rerunning `./scripts/configure-funnel.sh`. Old names can remain visible in status but fail externally.
+If Funnel status shows multiple hostnames, test the specific hostname printed as the "Available on the internet" URL after rerunning `./scripts/ingress/configure-funnel.sh`. Old names can remain visible in status but fail externally.

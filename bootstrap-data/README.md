@@ -18,12 +18,12 @@ Why it is local-only:
 - it should not be committed to a public repo
 
 Typical workflow:
-1. On the current working machine, run `./scripts/export-bootstrap-data.sh`
+1. On the current working machine, run `./scripts/bootstrap-data/export-bootstrap-data.sh`
 2. Copy `bootstrap-data/local/bootstrap-data.json` to the new machine or create it there
 3. Set `AUTO_APPLY_BOOTSTRAP_DATA=true` in the new stack's `.env`
 4. Run `./scripts/install.sh`
 
 You can also apply it manually after install:
-- `./scripts/apply-bootstrap-data.sh`
+- `./scripts/bootstrap-data/apply-bootstrap-data.sh`
 
 When `ENABLE_NZBDAV=true`, the apply flow configures NZBDAV and then points the Sonarr/Radarr SAB-compatible download clients at `nzbdav:3000`. The Arr UI may still call the client `SABnzbd`; that is expected because NZBDAV speaks the SAB-compatible API.

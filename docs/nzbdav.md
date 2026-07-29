@@ -34,7 +34,7 @@ NZBDAV completed paths are category subdirectories under `/downloads/nzbdav-comp
 
 The host-side path is `${DOWNLOADS_PATH}/nzbdav-completed/<category>`.
 
-`scripts/configure-nzbdav-paths.sh` creates these category directories during install/update when `ENABLE_NZBDAV=true`. It refuses completed-download paths outside `/downloads`, because Radarr/Sonarr/NZBDAV must all see the same mounted path.
+`scripts/services/configure-nzbdav-paths.sh` creates these category directories during install/update when `ENABLE_NZBDAV=true`. It refuses completed-download paths outside `/downloads`, because Radarr/Sonarr/NZBDAV must all see the same mounted path.
 
 ## Sonarr and Radarr library root folders
 

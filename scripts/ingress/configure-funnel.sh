@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 # shellcheck disable=SC1091
@@ -77,7 +77,7 @@ fi
 
 if [ "${AUTO_CONFIGURE_FUNNEL:-false}" != "true" ]; then
   echo "AUTO_CONFIGURE_FUNNEL is false; not changing Funnel config"
-  echo "If you want public Funnel URLs later, set AUTO_CONFIGURE_FUNNEL=true and rerun ./scripts/configure-funnel.sh"
+  echo "If you want public Funnel URLs later, set AUTO_CONFIGURE_FUNNEL=true and rerun ./scripts/ingress/configure-funnel.sh"
   exit 0
 fi
 

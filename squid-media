@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
+
+usage() {
+  cat <<'EOF'
+Usage: ./squid-media <command> [arguments]
+
+Safe commands:
+  status [SERVICE...]                 Show resolved stack container status.
+  start [SERVICE...]                  Start the resolved stack or named services.
+  stop [SERVICE...]                   Stop the resolved stack or named services.
+  restart [SERVICE...]                Restart the resolved stack or named services.
+  logs [--follow] [SERVICE...]        Show resolved stack logs.
+  update                              Pull the repo and refresh the resolved stack.
+  configure [--non-interactive]       Update local .env values.
+  funnel-status                       Show Tailscale Funnel routes.
+  bootstrap-apply [OPTIONS]           Run bootstrap-data apply; pass its options through.
+  help                                Show this help.
+
+Use ./scripts/install.sh for a first install. There is intentionally no destructive
+reset/destroy command; use the documented clean-reset workflow when needed.
+EOF
+}
+
+require_env() {
+  if [ ! -f ./.env ]; then
+    echo "ERROR: Missing $ROOT_DIR/.env. Run ./scripts/install.sh first." >&2
+    exit 1
+  fi
+}
+
+load_stack_config() {
+  require_env
+  set -a
+  # shellcheck disable=SC1091
+  source ./.env
+  set +a
+  # shellcheck disable=SC1091
+  source ./scripts/installer/compose-args.sh
+  build_compose_args
+}
+
+run_compose() {
+  docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" "$@"
+}
+
+command="${1:-help}"
+if [ "$#" -gt 0 ]; then
+  shift
+fi
+
+case "$command" in
+  help|-h|--help)
+    usage
+    ;;
+  status)
+    load_stack_config
+    run_compose ps "$@"
+    ;;
+  start)
+    load_stack_config
+    run_compose up -d "$@"
+    ;;
+  stop)
+    load_stack_config
+    run_compose stop "$@"
+    ;;
+  restart)
+    load_stack_config
+    run_compose restart "$@"
+    ;;
+  logs)
+    load_stack_config
+    run_compose logs "$@"
+    ;;
+  update)
+    exec ./scripts/update.sh
+    ;;
+  configure)
+    exec ./scripts/configure.sh "$@"
+    ;;
+  funnel-status)
+    command -v tailscale >/dev/null 2>&1 || {
+      echo "ERROR: Tailscale is not installed." >&2
+      exit 1
+    }
+    exec tailscale funnel status
+    ;;
+  bootstrap-apply)
+    exec ./scripts/bootstrap-data/apply-bootstrap-data.sh "$@"
+    ;;
+  *)
+    echo "ERROR: Unknown command: $command" >&2
+    usage >&2
+    exit 1
+    ;;
+esac
