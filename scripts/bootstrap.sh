@@ -149,7 +149,7 @@ fi
 
 if [ "$PREPARE_HOST_ONLY" = true ]; then
   echo "Host preparation completed without deploying the stack."
-  echo "Review the host, then continue with: cd $INSTALL_DIR && ./scripts/install.sh"
+  echo "Open a new SSH session so Docker group membership takes effect, review the host, then continue with: cd $INSTALL_DIR && ./scripts/install.sh"
   exit 0
 fi
 

@@ -38,7 +38,7 @@ That guided path will:
 - require enrollment into your Tailscale tailnet, using an auth key or browser login
 - stop and print the command needed to begin the normal stack installer
 
-After confirming the host is responsive and Docker/Tailscale are healthy, continue with:
+Open a new SSH session so Docker group membership is refreshed. After confirming the host is responsive and Docker/Tailscale are healthy, continue with:
 
 ```bash
 cd ~/portable-media-stack
