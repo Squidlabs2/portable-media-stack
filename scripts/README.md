@@ -1,8 +1,8 @@
 # Script map
 
-Top-level scripts are stable entrypoints. On a fresh Debian machine, begin with `bootstrap.sh --prepare-host`; normal operations start after setup with `../squid-media`.
+Top-level scripts are stable entrypoints. On a fresh Debian machine, begin conservatively with `bootstrap.sh --prepare-host-only --skip-upgrade`, verify the host, then run `install.sh`; normal operations start after setup with `../squid-media`.
 
-- `bootstrap.sh` — clone/update the repository, optionally prepare a fresh Debian host, then start installation.
+- `bootstrap.sh` — clone/update the repository, optionally prepare a fresh Debian host, and either stop for verification (`--prepare-host-only`) or start installation.
 - `install.sh` — first install or re-run the stack installer.
 - `update.sh` — pull and refresh the running stack.
 - `configure.sh` — edit the machine-local `.env` through the setup wizard.

@@ -5,6 +5,7 @@ REPO_URL="${REPO_URL:-https://github.com/Squidlabs2/portable-media-stack.git}"
 INSTALL_DIR="${INSTALL_DIR:-${HOME}/portable-media-stack}"
 BRANCH="${BRANCH:-main}"
 PREPARE_HOST=false
+PREPARE_HOST_ONLY=false
 PREPARE_HOST_ARGS=()
 INSTALL_ARGS=()
 BOOTSTRAP_SOURCE_DIR=
@@ -79,6 +80,10 @@ while [ $# -gt 0 ]; do
     --prepare-host)
       PREPARE_HOST=true
       ;;
+    --prepare-host-only)
+      PREPARE_HOST=true
+      PREPARE_HOST_ONLY=true
+      ;;
     --skip-upgrade)
       PREPARE_HOST_ARGS+=("$1")
       ;;
@@ -140,6 +145,12 @@ fi
 
 if [ "$PREPARE_HOST" = true ] && [ "$HOST_PREP_DONE" != true ] && have_cmd git; then
   ./scripts/host/prepare-debian.sh "${PREPARE_HOST_ARGS[@]}"
+fi
+
+if [ "$PREPARE_HOST_ONLY" = true ]; then
+  echo "Host preparation completed without deploying the stack."
+  echo "Review the host, then continue with: cd $INSTALL_DIR && ./scripts/install.sh"
+  exit 0
 fi
 
 run_installer() {

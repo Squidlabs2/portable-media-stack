@@ -18,14 +18,15 @@ Existing Debian host with Docker and Tailscale already configured:
 bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh)
 ```
 
-Fresh Debian host — recommended one-command install:
+Fresh Debian host — recommended safe first step:
 
 ```bash
 sudo apt-get update && sudo apt-get install -y curl && \
-  bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host
+  bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) \
+    --prepare-host-only --skip-upgrade
 ```
 
-The initial `curl` install is the only bootstrap prerequisite on a minimal Debian image; the guided installer handles the remaining host and stack setup.
+The initial `curl` install is the only bootstrap prerequisite on a minimal Debian image. This conservative first step prepares the host, skips a full OS upgrade, and deliberately stops before stack deployment.
 
 That guided path will:
 - run `apt-get update`
@@ -35,14 +36,25 @@ That guided path will:
 - install Tailscale and start `tailscaled`
 - add the current non-root user to the `docker` group
 - require enrollment into your Tailscale tailnet, using an auth key or browser login
-- refresh Docker group access before starting the installer
-- then continue into the normal stack installer
+- stop and print the command needed to begin the normal stack installer
+
+After confirming the host is responsive and Docker/Tailscale are healthy, continue with:
+
+```bash
+cd ~/portable-media-stack
+docker info
+tailscale status
+./scripts/install.sh
+```
 
 Useful host-prep variants:
 
 ```bash
-# prepare host but skip full apt upgrade
+# prepare the host and immediately launch the installer, but skip a full apt upgrade
 bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host --skip-upgrade
+
+# prepare only (default behavior of the recommended fresh-host command)
+bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host-only --skip-upgrade
 
 # preview host prep commands without changing the machine
 bash <(curl -fsSL https://raw.githubusercontent.com/Squidlabs2/portable-media-stack/main/scripts/bootstrap.sh) --prepare-host --dry-run
