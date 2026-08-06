@@ -59,9 +59,9 @@ def main():
             time.sleep(2)
     definitions, profiles = apply_high_quality_1080p_policy(definitions, profiles, int(os.environ.get("RADARR_MAX_MB_PER_MINUTE", "100")))
     for item in definitions:
-        request_json(f"{url}/qualitydefinition/{item['id']}", key, "PUT", item)
+        request_json(f"{url}/qualitydefinition/{item['id']}/", key, "PUT", item)
     for item in profiles:
-        request_json(f"{url}/qualityprofile/{item['id']}", key, "PUT", item)
+        request_json(f"{url}/qualityprofile/{item['id']}/", key, "PUT", item)
     print("Applied Radarr high-quality 1080p policy")
 
 if __name__ == "__main__":
