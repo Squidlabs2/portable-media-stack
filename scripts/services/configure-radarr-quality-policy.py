@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Apply the portable stack's default Radarr quality policy after first start."""
+import http.client
 import os
 import time
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -46,8 +48,15 @@ def main():
         raise RuntimeError(f"Timed out waiting for {config}")
     key = ET.parse(config).getroot().findtext("ApiKey")
     url = f"http://127.0.0.1:{os.environ.get('RADARR_PORT', '7878')}/api/v3"
-    definitions = request_json(f"{url}/qualitydefinition", key)
-    profiles = request_json(f"{url}/qualityprofile", key)
+    for attempt in range(30):
+        try:
+            definitions = request_json(f"{url}/qualitydefinition", key)
+            profiles = request_json(f"{url}/qualityprofile", key)
+            break
+        except (OSError, urllib.error.URLError, http.client.HTTPException) as error:
+            if attempt == 29:
+                raise RuntimeError("Radarr did not become ready within 60 seconds") from error
+            time.sleep(2)
     definitions, profiles = apply_high_quality_1080p_policy(definitions, profiles, int(os.environ.get("RADARR_MAX_MB_PER_MINUTE", "100")))
     for item in definitions:
         request_json(f"{url}/qualitydefinition/{item['id']}", key, "PUT", item)
