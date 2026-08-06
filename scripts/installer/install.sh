@@ -278,6 +278,7 @@ prepare_generated_configs
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
 recreate_seerr_web_if_needed
+./scripts/services/configure-radarr-quality-policy.py
 configure_download_clients
 configure_ingress
 apply_bootstrap_data_if_enabled
