@@ -24,6 +24,9 @@ def apply_high_quality_1080p_policy(definitions, profiles, max_mb_per_minute):
     changed_profiles = []
     for profile in profiles:
         item = dict(profile)
+        if any(marker in item.get("name", "").lower() for marker in ("ultra", "4k")):
+            changed_profiles.append(item)
+            continue
         item["items"] = [dict(q, allowed=False if blocked(q.get("quality", {}).get("name", "")) else q.get("allowed", True)) for q in profile.get("items", [])]
         changed_profiles.append(item)
     return changed_definitions, changed_profiles
