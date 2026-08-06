@@ -46,8 +46,10 @@ def main():
         time.sleep(2)
     else:
         raise RuntimeError(f"Timed out waiting for {config}")
-    key = ET.parse(config).getroot().findtext("ApiKey")
-    url = f"http://127.0.0.1:{os.environ.get('RADARR_PORT', '7878')}/api/v3"
+    root = ET.parse(config).getroot()
+    key = root.findtext("ApiKey")
+    url_base = (root.findtext("UrlBase") or "").rstrip("/")
+    url = f"http://127.0.0.1:{os.environ.get('RADARR_PORT', '7878')}{url_base}/api/v3"
     for attempt in range(30):
         try:
             definitions = request_json(f"{url}/qualitydefinition", key)
