@@ -240,11 +240,11 @@ prompt_first_run_preset() {
     echo
     echo "Welcome to Squid Media Stack. Choose a starting setup:"
     echo "  1) Private media box (Tailscale/LAN, NZBDAV, Seerr)"
-    echo "  2) Family request box (Tailscale Funnel, /radarr, /sonarr, /seerr)"
-    echo "  3) Portable public box (recommended: Cloudflare Tunnel and custom domain)"
+    echo "  2) Family request box (recommended: public Seerr-only Tailscale Funnel)"
+    echo "  3) Portable custom-domain box (Cloudflare Tunnel)"
     echo "  4) Custom setup (answer every deployment/service question)"
-    read -r -p "Select a starting setup [3]: " answer
-    answer="${answer:-3}"
+    read -r -p "Select a starting setup [2]: " answer
+    answer="${answer:-2}"
 
     case "$answer" in
       1)
@@ -302,13 +302,13 @@ apply_mode_defaults() {
 
   case "$mode" in
     tailscale-funnel)
-      set_kv INSTALL_TRAEFIK true
+      set_kv INSTALL_TRAEFIK false
       set_kv ENABLE_PUBLIC_HOSTNAMES false
       set_kv TAILSCALE_REQUIRED true
       set_kv AUTO_CONFIGURE_FUNNEL true
-      set_kv FUNNEL_USE_PATHS true
-      set_kv FUNNEL_RADARR true
-      set_kv FUNNEL_SONARR true
+      set_kv FUNNEL_USE_PATHS false
+      set_kv FUNNEL_RADARR false
+      set_kv FUNNEL_SONARR false
       set_kv FUNNEL_JELLYFIN false
       set_kv FUNNEL_SEERR true
       set_kv FUNNEL_RADARR_PUBLIC_PORT 443
@@ -318,9 +318,8 @@ apply_mode_defaults() {
       set_kv FUNNEL_RADARR_PATH /radarr
       set_kv FUNNEL_SONARR_PATH /sonarr
       set_kv FUNNEL_JELLYFIN_PATH /jellyfin
-      set_kv FUNNEL_SEERR_PATH /seerr
-      set_kv TRAEFIK_FUNNEL_PORT 8088
-      set_kv TRAEFIK_FUNNEL_CONFIG_DIR "${config_root}/traefik-funnel"
+      set_kv FUNNEL_SEERR_PATH /
+      set_kv FUNNEL_SEERR_FALLBACK false
       ;;
     cloudflare-tunnel)
       set_kv INSTALL_TRAEFIK false
@@ -370,7 +369,7 @@ apply_mode_defaults
 if [ "$NON_INTERACTIVE" = false ]; then
   case "$(get_value MODE)" in
     tailscale-funnel)
-      echo "Recommended Funnel defaults loaded: bundled Traefik in front of Funnel on local port 8088, one hostname on 443, Radarr at /radarr, Sonarr at /sonarr, Jellyfin off."
+      echo "Recommended Funnel defaults loaded: Seerr only at the root of one public HTTPS 443 Funnel URL. Radarr, Sonarr, Jellyfin, NZBDAV, and administration remain private."
       ;;
     cloudflare-tunnel)
       echo "Recommended Cloudflare Tunnel defaults loaded: custom public hostnames, no inbound ports, no Tailscale Funnel, no bundled Traefik. Tailscale remains enabled for remote administration."
@@ -423,7 +422,7 @@ if [ "$MODE_VALUE" = "cloudflare-tunnel" ]; then
   prompt_value CLOUDFLARE_TUNNEL_TOKEN "Cloudflare Tunnel token to write locally if the token file does not exist (leave blank to skip)"
 elif [ "$MODE_VALUE" = "tailscale-funnel" ]; then
   if [ "$SETUP_PRESET" = funnel ]; then
-    echo "Funnel preset: bundled Traefik, Radarr at /radarr, Sonarr at /sonarr, and Seerr at /seerr. Use ./squid-media configure later to customize these settings."
+    echo "Funnel preset: Seerr only at the root of the public HTTPS 443 URL. Radarr, Sonarr, Jellyfin, NZBDAV, and administration remain private. Use ./squid-media configure later to customize this."
   else
     prompt_value INSTALL_TRAEFIK "Install bundled Traefik in front of Funnel path routes (recommended: true)"
     prompt_value AUTO_CONFIGURE_FUNNEL "Auto-configure Tailscale Funnel during install (recommended: true)"
