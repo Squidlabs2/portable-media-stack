@@ -79,11 +79,11 @@ cd portable-media-stack
 On a brand-new install, the setup wizard starts with four simple choices:
 
 1. Private Tailscale/LAN media box.
-2. Family request box using Tailscale Funnel paths for Radarr, Sonarr, and Seerr.
-3. Portable custom-domain box using Cloudflare Tunnel (the recommended default).
+2. Family request box using a public Seerr-only Tailscale Funnel (the recommended default).
+3. Portable custom-domain box using Cloudflare Tunnel.
 4. Full custom setup for every deployment and service option.
 
-The first three presets use NZBDAV and Seerr by default, keep legacy SABnzbd off, and leave bootstrap-data auto-apply off. Every preset keeps the host enrolled in Tailscale for SSH and private administration; Cloudflare Tunnel is the default public ingress. Run `./squid-media configure` later when you want to adjust every option.
+The first three presets use NZBDAV and Seerr by default, keep legacy SABnzbd off, and leave bootstrap-data auto-apply off. Every preset keeps the host enrolled in Tailscale for SSH and private administration. The default public ingress exposes only Seerr through a root-level Tailscale Funnel URL; Radarr, Sonarr, Jellyfin, NZBDAV, and administration stay private. Run `./squid-media configure` later when you want to adjust every option.
 
 Manual two-step fresh Debian flow:
 
@@ -151,62 +151,31 @@ DNS note: a Cloudflare wildcard record such as `*.myallbox.com` can cover the na
 
 ## Tailscale Funnel mode
 
-`tailscale-funnel` is the right fit when:
+`tailscale-funnel` is the default public option for a family request box when:
 - the machine stays on your tailnet
 - you still want SSH and private admin access over Tailscale
 - the router cannot forward 80/443
-- you want public access to Radarr or Sonarr anyway
+- you want to expose only Seerr publicly while keeping every media-management and administration service private
 
-Installer prompts cover:
-- whether to auto-configure Funnel during install
-- whether to use one hostname with path-based URLs
-- whether to expose Radarr
-- whether to expose Sonarr
-- whether to expose Jellyfin
-- whether to expose Seerr
-- which public Funnel paths to use for Radarr/Sonarr when path-based mode is enabled
-- which public Funnel ports to use when path-based mode is disabled
-
-Recommended defaults for your use case:
+Recommended default values:
 - `AUTO_CONFIGURE_FUNNEL=true`
-- `FUNNEL_USE_PATHS=true`
-- `FUNNEL_RADARR=true`
-- `FUNNEL_SONARR=true`
+- `FUNNEL_USE_PATHS=false`
+- `FUNNEL_RADARR=false`
+- `FUNNEL_SONARR=false`
 - `FUNNEL_JELLYFIN=false`
 - `FUNNEL_SEERR=true`
-- `FUNNEL_RADARR_PUBLIC_PORT=443`
-- `FUNNEL_SONARR_PUBLIC_PORT=443`
-- `FUNNEL_JELLYFIN_PUBLIC_PORT=10000`
 - `FUNNEL_SEERR_PUBLIC_PORT=443`
-- `FUNNEL_RADARR_PATH=/radarr`
-- `FUNNEL_SONARR_PATH=/sonarr`
-- `FUNNEL_SEERR_PATH=/seerr`
-- `INSTALL_TRAEFIK=true`
-- `TRAEFIK_FUNNEL_PORT=8088`
+- `FUNNEL_SEERR_PATH=/`
+- `INSTALL_TRAEFIK=false`
 
 The repo includes `scripts/ingress/configure-funnel.sh`, which can apply the Funnel config later.
 When Funnel auto-config is enabled, the installer now prints the expected public mapping and the Funnel helper/status output prints likely public URLs based on the machine's tailnet DNS name.
 
-Path-based Funnel URLs look like:
-- `https://<device>.<tailnet>.ts.net/radarr`
-- `https://<device>.<tailnet>.ts.net/sonarr`
-- `https://<device>.<tailnet>.ts.net/seerr`
+The default public URL is:
 
-The installer also updates Radarr and Sonarr `UrlBase` automatically when path-based Funnel mode is enabled.
-For Arr apps, the recommended path-based Funnel architecture is bundled Traefik listening on a local high port behind Funnel; Funnel points `/radarr` and `/sonarr` at Traefik, and Traefik preserves those path prefixes for the UrlBase-aware Arr apps.
-In Funnel mode, the bundled Traefik front door now uses a generated file-provider config rather than Traefik's Docker provider.
+- `https://<device>.<tailnet>.ts.net/` -> Seerr on internal port `5055`
 
-In the verified NZBDAV setup, keep NZBDAV private and expose Radarr/Sonarr/Seerr through Funnel paths. The working public URL shape is:
-- `https://<device>.<tailnet>.ts.net/radarr`
-- `https://<device>.<tailnet>.ts.net/sonarr`
-- `https://<device>.<tailnet>.ts.net/seerr`
-
-Seerr is the public-friendly request portal. Since Seerr does not natively support a URL base like Radarr/Sonarr, path-based Funnel mode serves `/seerr` through a small generated Nginx subpath proxy behind the same bundled Traefik/Funnel path router.
-
-For the current test machine this resolved as:
-- `https://ethan.wolverine-crocodile.ts.net/radarr`
-- `https://ethan.wolverine-crocodile.ts.net/sonarr`
-- `https://ethan.wolverine-crocodile.ts.net/seerr`
+Seerr must be served at `/`; do not proxy it under `/seerr`, because its frontend does not reliably support a URL base. The installer can still be reconfigured for an intentional custom/path-based Funnel layout, but that is not the default and should not expose Arr, Jellyfin, NZBDAV, or administration services casually.
 
 ## Traefik options
 
