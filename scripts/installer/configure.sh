@@ -397,6 +397,10 @@ refresh_derived_config_paths
 prompt_value AUTO_APPLY_BOOTSTRAP_DATA "Auto-apply bootstrap data after install (true|false)"
 if [ "$(get_value AUTO_APPLY_BOOTSTRAP_DATA)" = "true" ]; then
   prompt_value BOOTSTRAP_DATA_FILE "Bootstrap data file path"
+  prompt_value BOOTSTRAP_SOURCE_HOST "Optional private Tailscale/SSH bootstrap source (user@host; blank uses local file)"
+  if [ -n "$(get_value BOOTSTRAP_SOURCE_HOST)" ]; then
+    prompt_value BOOTSTRAP_SOURCE_PATH "Bootstrap source file path on the source host"
+  fi
   prompt_value BOOTSTRAP_WAIT_SECONDS "Bootstrap apply wait timeout (seconds)"
 fi
 if [ "$SETUP_PRESET" = custom ]; then

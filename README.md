@@ -199,6 +199,26 @@ After the first install, use the repository-local CLI instead of remembering the
 
 `./squid-media configure` updates the local `.env`, and `./squid-media bootstrap-apply --input <file>` delegates to the existing bootstrap-data importer. The CLI deliberately has no destructive `destroy` or `reset` command; use the documented clean-reset workflow when you explicitly want to remove a deployment.
 
+## Bootstrap data automation
+
+Bootstrap data seeds a fresh portable install with Prowlarr indexers/application links plus Radarr, Sonarr, and NZBDAV/SAB-compatible download-client settings. It contains credentials and must never be committed to Git.
+
+Export the seed from the trusted source host once:
+
+```bash
+./scripts/bootstrap-data/export-bootstrap-data.sh
+```
+
+To let new Tailscale-connected boxes fetch that seed automatically during install, configure their ignored local `.env` with:
+
+```bash
+AUTO_APPLY_BOOTSTRAP_DATA=true
+BOOTSTRAP_SOURCE_HOST=greg@hplabsV2
+BOOTSTRAP_SOURCE_PATH=~/.local/share/portable-media-stack/bootstrap-data/latest-bootstrap-data.json
+```
+
+The target needs SSH key-based access to that source host. During install it fetches the file privately over Tailscale only if the local bootstrap file is absent, then applies it. In `tailscale-funnel` mode, apply runs within the stack's dedicated Tailscale network namespace so private Arr/downloader ports remain unexposed.
+
 ## Files
 
 - `compose.yml` - base app stack

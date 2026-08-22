@@ -66,7 +66,7 @@ funnel_expected_summary() {
 }
 
 resolve_bootstrap_data_file() {
-  local configured fallback_home fallback_repo candidate
+  local configured fallback_home fallback_repo candidate source_host source_path fetch_target
   configured="${BOOTSTRAP_DATA_FILE:-}"
   fallback_home="${BOOTSTRAP_LIBRARY_DIR:-${HOME}/.local/share/portable-media-stack/bootstrap-data}/latest-bootstrap-data.json"
   fallback_repo="./bootstrap-data/local/bootstrap-data.json"
@@ -79,7 +79,19 @@ resolve_bootstrap_data_file() {
     fi
   done
 
+  source_host="${BOOTSTRAP_SOURCE_HOST:-}"
+  source_path="${BOOTSTRAP_SOURCE_PATH:-~/.local/share/portable-media-stack/bootstrap-data/latest-bootstrap-data.json}"
+  if [ -n "$source_host" ]; then
+    fetch_target="${configured:-$fallback_home}"
+    echo "Fetching bootstrap data from $source_host over SSH" >&2
+    ./scripts/bootstrap-data/fetch-bootstrap-data.sh "$source_host" "$source_path" "$fetch_target" >&2
+    chmod 600 "$fetch_target"
+    printf '%s\n' "$fetch_target"
+    return 0
+  fi
+
   echo "ERROR: AUTO_APPLY_BOOTSTRAP_DATA=true but no bootstrap data file was found. Checked: ${configured:-<empty>}, $fallback_home, $fallback_repo" >&2
+  echo "Set BOOTSTRAP_SOURCE_HOST=<user@tailscale-host> to fetch it automatically over private SSH." >&2
   return 1
 }
 
