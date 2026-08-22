@@ -178,7 +178,7 @@ fi
 run_shell "curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | $SUDO tee /etc/apt/sources.list.d/tailscale.list >/dev/null"
 
 run $SUDO apt-get update
-run $SUDO apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin tailscale fastfetch
+run $SUDO apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin tailscale fastfetch vim
 run $SUDO systemctl enable --now docker
 run $SUDO systemctl enable --now tailscaled
 
@@ -192,7 +192,7 @@ prompt_for_tailscale_auth_key
 connect_tailscale
 
 echo "Debian host prep complete; Docker is ready and Tailscale tailnet enrollment is verified."
-echo "Installed: curl git bash python3 Docker Engine docker compose plugin tailscale fastfetch"
+echo "Installed: curl git bash python3 Docker Engine docker compose plugin tailscale fastfetch vim"
 if [ -n "$SUDO" ] && [ -n "${USER:-}" ] && [ "${USER}" != "root" ]; then
   echo "The bootstrap refreshes Docker group access before it launches the installer; future SSH sessions still need a new login."
 fi
