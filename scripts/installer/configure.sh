@@ -427,33 +427,46 @@ elif [ "$MODE_VALUE" = "tailscale-funnel" ]; then
   if [ "$SETUP_PRESET" = funnel ]; then
     echo "Funnel preset: Seerr only at the root of the public HTTPS 443 URL. Radarr, Sonarr, Jellyfin, NZBDAV, and administration remain private. Use ./squid-media configure later to customize this."
   else
-    prompt_value INSTALL_TRAEFIK "Install bundled Traefik in front of Funnel path routes (recommended: true)"
+    prompt_value INSTALL_TRAEFIK "Install bundled Traefik in front of Funnel path routes (recommended: false for Seerr-only)"
     prompt_value AUTO_CONFIGURE_FUNNEL "Auto-configure Tailscale Funnel during install (recommended: true)"
-    prompt_value FUNNEL_USE_PATHS "Use one hostname with path-based Funnel URLs (recommended: true)"
-    prompt_value FUNNEL_RADARR "Expose Radarr through Funnel (recommended: true)"
-    prompt_value FUNNEL_SONARR "Expose Sonarr through Funnel (recommended: true)"
+    prompt_value FUNNEL_USE_PATHS "Use one hostname with path-based Funnel URLs (recommended: false for Seerr-only)"
+    prompt_value FUNNEL_RADARR "Expose Radarr through Funnel (recommended: false)"
+    prompt_value FUNNEL_SONARR "Expose Sonarr through Funnel (recommended: false)"
     prompt_value FUNNEL_JELLYFIN "Expose Jellyfin through Funnel (recommended: false)"
-    prompt_value FUNNEL_SEERR "Expose Seerr through Funnel at /seerr (recommended: true)"
+    prompt_value FUNNEL_SEERR "Expose Seerr through Funnel (recommended: true)"
     if [ "$(get_value FUNNEL_USE_PATHS)" = "true" ]; then
       if [ "$(get_value INSTALL_TRAEFIK)" = "true" ]; then
         prompt_value TRAEFIK_FUNNEL_PORT "Local Traefik port used behind Funnel (recommended: 8088)"
       fi
       set_kv FUNNEL_RADARR_PUBLIC_PORT 443
       set_kv FUNNEL_SONARR_PUBLIC_PORT 443
-      prompt_funnel_path FUNNEL_RADARR_PATH "Public Funnel path for Radarr (recommended: /radarr)"
-      prompt_funnel_path FUNNEL_SONARR_PATH "Public Funnel path for Sonarr (recommended: /sonarr)"
+      set_kv FUNNEL_SEERR_PUBLIC_PORT 443
+      if [ "$(get_value FUNNEL_RADARR)" = "true" ]; then
+        prompt_funnel_path FUNNEL_RADARR_PATH "Public Funnel path for Radarr (recommended: /radarr)"
+      fi
+      if [ "$(get_value FUNNEL_SONARR)" = "true" ]; then
+        prompt_funnel_path FUNNEL_SONARR_PATH "Public Funnel path for Sonarr (recommended: /sonarr)"
+      fi
       if [ "$(get_value FUNNEL_SEERR)" = "true" ]; then
-        set_kv FUNNEL_SEERR_PUBLIC_PORT 443
-        prompt_funnel_path FUNNEL_SEERR_PATH "Public Funnel path for Seerr (recommended: /seerr)"
+        prompt_funnel_path FUNNEL_SEERR_PATH "Public Funnel path for Seerr (recommended: /)"
       fi
       if [ "$(get_value FUNNEL_JELLYFIN)" = "true" ]; then
         prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000)"
       fi
     else
-      prompt_value FUNNEL_RADARR_PUBLIC_PORT "Public Funnel port for Radarr (recommended: 443)"
-      prompt_value FUNNEL_SONARR_PUBLIC_PORT "Public Funnel port for Sonarr (recommended: 8443)"
-      prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000 if enabled)"
-      prompt_value FUNNEL_SEERR_PUBLIC_PORT "Public Funnel port for Seerr (recommended: 10000 if enabled)"
+      set_kv FUNNEL_SEERR_PATH /
+      if [ "$(get_value FUNNEL_RADARR)" = "true" ]; then
+        prompt_value FUNNEL_RADARR_PUBLIC_PORT "Public Funnel port for Radarr (recommended: 8443)"
+      fi
+      if [ "$(get_value FUNNEL_SONARR)" = "true" ]; then
+        prompt_value FUNNEL_SONARR_PUBLIC_PORT "Public Funnel port for Sonarr (recommended: 10000)"
+      fi
+      if [ "$(get_value FUNNEL_JELLYFIN)" = "true" ]; then
+        prompt_value FUNNEL_JELLYFIN_PUBLIC_PORT "Public Funnel port for Jellyfin (recommended: 10000)"
+      fi
+      if [ "$(get_value FUNNEL_SEERR)" = "true" ]; then
+        prompt_value FUNNEL_SEERR_PUBLIC_PORT "Public Funnel port for Seerr (recommended: 443)"
+      fi
     fi
   fi
 elif [ "$MODE_VALUE" = "traefik-private-dns" ] || [ "$MODE_VALUE" = "traefik-public-dns" ]; then
