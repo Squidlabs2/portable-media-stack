@@ -79,6 +79,34 @@ tailscale_connected() {
   tailscale status --json >/dev/null 2>&1
 }
 
+configure_user_shell() {
+  local bashrc="${HOME}/.bashrc"
+  local marker_start="# >>> squid-media host prep >>>"
+  local marker_end="# <<< squid-media host prep <<<"
+
+  if [ "$DRY_RUN" = true ]; then
+    printf 'DRY RUN: update %q with fastfetch startup and alias v=%q\n' "$bashrc" "ls -hals"
+    return 0
+  fi
+
+  touch "$bashrc"
+  if grep -Fq "$marker_start" "$bashrc"; then
+    echo "Shell convenience block already present in $bashrc"
+    return 0
+  fi
+
+  cat >>"$bashrc" <<'EOF'
+
+# >>> squid-media host prep >>>
+if command -v fastfetch >/dev/null 2>&1; then
+  fastfetch
+fi
+alias v='ls -hals'
+# <<< squid-media host prep <<<
+EOF
+  echo "Added fastfetch startup and alias v='ls -hals' to $bashrc"
+}
+
 connect_tailscale() {
   [ "$DRY_RUN" = false ] || return 0
 
@@ -150,7 +178,7 @@ fi
 run_shell "curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list | $SUDO tee /etc/apt/sources.list.d/tailscale.list >/dev/null"
 
 run $SUDO apt-get update
-run $SUDO apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin tailscale
+run $SUDO apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin tailscale fastfetch
 run $SUDO systemctl enable --now docker
 run $SUDO systemctl enable --now tailscaled
 
@@ -158,11 +186,13 @@ if [ -n "$SUDO" ] && [ -n "${USER:-}" ] && [ "${USER}" != "root" ]; then
   run $SUDO usermod -aG docker "$USER"
 fi
 
+configure_user_shell
+
 prompt_for_tailscale_auth_key
 connect_tailscale
 
 echo "Debian host prep complete; Docker is ready and Tailscale tailnet enrollment is verified."
-echo "Installed: curl git bash python3 Docker Engine docker compose plugin tailscale"
+echo "Installed: curl git bash python3 Docker Engine docker compose plugin tailscale fastfetch"
 if [ -n "$SUDO" ] && [ -n "${USER:-}" ] && [ "${USER}" != "root" ]; then
   echo "The bootstrap refreshes Docker group access before it launches the installer; future SSH sessions still need a new login."
 fi
