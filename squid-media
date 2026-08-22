@@ -17,6 +17,7 @@ Safe commands:
   update                              Pull the repo and refresh the resolved stack.
   configure [--non-interactive]       Update local .env values.
   funnel-status                       Show Tailscale Funnel routes.
+  seerr-configure-services            Configure Seerr's Radarr/Sonarr services.
   bootstrap-apply [OPTIONS]           Run bootstrap-data apply; pass its options through.
   help                                Show this help.
 
@@ -89,6 +90,14 @@ case "$command" in
       exit 1
     fi
     exec docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" exec -T tailscale tailscale funnel status
+    ;;
+  seerr-configure-services)
+    load_stack_config
+    if [ "${MODE:-tailnet-only}" != "tailscale-funnel" ]; then
+      echo "ERROR: seerr-configure-services currently requires MODE=tailscale-funnel." >&2
+      exit 1
+    fi
+    exec ./scripts/services/configure-seerr-arr-services-in-stack-namespace.sh
     ;;
   bootstrap-apply)
     require_env
