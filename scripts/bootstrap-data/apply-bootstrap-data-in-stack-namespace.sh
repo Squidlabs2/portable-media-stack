@@ -65,6 +65,7 @@ if [ "${ENABLE_NZBDAV:-false}" = "true" ]; then
   downloader_env+=(
     --env NZBDAV_CONFIG=/config/nzbdav
     --env TARGET_NZBDAV_URL="http://127.0.0.1:${NZBDAV_PORT:-3000}"
+    --env TARGET_NZBDAV_BASE_URL="http://127.0.0.1:${NZBDAV_PORT:-3000}"
     --env TARGET_INTERNAL_NZBDAV_HOST=127.0.0.1
     --env TARGET_INTERNAL_NZBDAV_PORT="${NZBDAV_PORT:-3000}"
   )
