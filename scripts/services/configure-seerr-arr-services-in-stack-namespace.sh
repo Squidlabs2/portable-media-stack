@@ -12,6 +12,10 @@ tailscale_id="$(docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" ps -q tail
 [ -n "$tailscale_id" ] || { echo "Dedicated stack Tailscale container is not running" >&2; exit 1; }
 
 config_root="${CONFIG_ROOT:-$ROOT_DIR/config}"
+# Stop Seerr before editing settings.json so its in-memory settings cannot overwrite
+# the generated Arr API keys during graceful shutdown.
+docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" stop seerr
+
 docker run --rm \
   --network "container:${tailscale_id}" \
   --env SEERR_CONFIG=/config/seerr \
@@ -28,4 +32,4 @@ docker run --rm \
   python:3.13-alpine \
   python /scripts/configure-seerr-arr-services.py
 
-docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" restart seerr
+docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d seerr
