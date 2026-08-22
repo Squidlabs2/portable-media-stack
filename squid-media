@@ -83,11 +83,12 @@ case "$command" in
     exec ./scripts/configure.sh "$@"
     ;;
   funnel-status)
-    command -v tailscale >/dev/null 2>&1 || {
-      echo "ERROR: Tailscale is not installed." >&2
+    load_stack_config
+    if [ "${MODE:-tailnet-only}" != "tailscale-funnel" ]; then
+      echo "ERROR: funnel-status requires MODE=tailscale-funnel." >&2
       exit 1
-    }
-    exec tailscale funnel status
+    fi
+    exec docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" exec -T tailscale tailscale funnel status
     ;;
   bootstrap-apply)
     exec ./scripts/bootstrap-data/apply-bootstrap-data.sh "$@"

@@ -6,6 +6,13 @@ cd "$ROOT_DIR"
 
 # shellcheck disable=SC1091
 source ./.env
+# shellcheck disable=SC1091
+source ./scripts/installer/compose-args.sh
+build_compose_args
+
+run_stack_tailscale() {
+  docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" exec -T tailscale tailscale "$@"
+}
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -67,7 +74,7 @@ print_url_hint() {
   echo "$name public URL: $(public_url "$dns_name" "$public_port" "$public_path")"
 }
 
-need_cmd tailscale
+need_cmd docker
 need_cmd python3
 
 if [ "${MODE:-tailnet-only}" != "tailscale-funnel" ]; then
@@ -102,10 +109,10 @@ run_funnel() {
   if [ -n "$public_path" ]; then
     public_path="$(normalize_path "$public_path")"
     echo "Configuring Funnel for $name on public port $public_port path $public_path -> $target_url"
-    tailscale funnel --bg --yes --https="$public_port" --set-path="$public_path" "$target_url"
+    run_stack_tailscale funnel --bg --yes --https="$public_port" --set-path="$public_path" "$target_url"
   else
     echo "Configuring Funnel for $name on public port $public_port -> $target_url"
-    tailscale funnel --bg --yes --https="$public_port" "$target_url"
+    run_stack_tailscale funnel --bg --yes --https="$public_port" "$target_url"
   fi
 }
 
@@ -113,7 +120,7 @@ clear_funnel_port() {
   local public_port="$1"
   validate_port "$public_port"
   echo "Clearing existing Funnel config on public port $public_port"
-  tailscale funnel --yes --https="$public_port" off >/dev/null 2>&1 || true
+  run_stack_tailscale funnel --yes --https="$public_port" off >/dev/null 2>&1 || true
 }
 
 if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
@@ -155,11 +162,11 @@ else
   run_funnel "${FUNNEL_SEERR_FALLBACK:-true}" "${FUNNEL_SEERR_FALLBACK_PUBLIC_PORT:-10000}" "http://127.0.0.1:${SEERR_PORT:-5055}" "seerr fallback"
 fi
 
-dns_name="$(tailscale status --json | python3 -c 'import sys,json; d=json.load(sys.stdin); print((d.get("Self",{}).get("DNSName","") or "").rstrip("."))')"
+dns_name="$(run_stack_tailscale status --json | python3 -c 'import sys,json; d=json.load(sys.stdin); print((d.get("Self",{}).get("DNSName","") or "").rstrip("."))')"
 
 echo
 echo "Current Funnel status:"
-tailscale funnel status
+run_stack_tailscale funnel status
 echo
 if [ -n "$dns_name" ]; then
   echo "Likely public URLs:"

@@ -34,6 +34,13 @@ prepare_seerr_config
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" pull
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
+if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ]; then
+  ./scripts/services/run-arr-policy-in-stack-namespace.sh configure-radarr-quality-policy.py
+  ./scripts/services/run-arr-policy-in-stack-namespace.sh configure-sonarr-season-pack-policy.py
+else
+  ./scripts/services/configure-radarr-quality-policy.py
+  ./scripts/services/configure-sonarr-season-pack-policy.py
+fi
 if funnel_path_mode_enabled && [ "${ENABLE_SEERR:-false}" = "true" ]; then
   docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d --force-recreate seerr-web
 fi

@@ -23,6 +23,7 @@ build_compose_args() {
       fi
       ;;
     tailscale-funnel)
+      COMPOSE_FILES+=(-f compose.tailscale-funnel.yml)
       if funnel_path_mode_enabled; then
         COMPOSE_FILES+=(-f compose.funnel-traefik.yml)
         COMPOSE_FILES+=(-f compose.funnel-traefik-bundled.yml)

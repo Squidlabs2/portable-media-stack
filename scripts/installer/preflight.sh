@@ -64,6 +64,12 @@ PY
   [ -s "$token_file" ] || fail "Cloudflare Tunnel token file is required for MODE=cloudflare-tunnel: $token_file"
 fi
 
+if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ]; then
+  [ -n "${TAILSCALE_STACK_AUTHKEY:-}" ] || fail "TAILSCALE_STACK_AUTHKEY is required for MODE=tailscale-funnel"
+  state_dir="${TAILSCALE_STACK_STATE_DIR:-${CONFIG_ROOT:-./config}/tailscale-state}"
+  mkdir -p "$state_dir"
+fi
+
 if [ "${MODE:-tailnet-only}" != "tailnet-only" ] && [ "${INSTALL_TRAEFIK:-true}" = "true" ]; then
   if [ "${MODE:-tailnet-only}" = "traefik-public-dns" ] && [ "${TRAEFIK_ACME_CHALLENGE:-http}" = "cloudflare-dns" ] && [ -z "${CLOUDFLARE_DNS_API_TOKEN:-}" ]; then
     fail "CLOUDFLARE_DNS_API_TOKEN is required for traefik-public-dns with TRAEFIK_ACME_CHALLENGE=cloudflare-dns"

@@ -1,0 +1,68 @@
+# Dedicated stack Tailscale identity for the Seerr-only Funnel mode.
+# Host Tailscale remains the SSH/admin path; this identity serves only the stack.
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: ${STACK_NAME:-portable-media-stack}_tailscale
+    hostname: ${TAILSCALE_STACK_HOSTNAME:-portable-media-stack}
+    restart: unless-stopped
+    environment:
+      TS_AUTHKEY: ${TAILSCALE_STACK_AUTHKEY:?TAILSCALE_STACK_AUTHKEY is required for tailscale-funnel mode}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_AUTH_ONCE: "true"
+    volumes:
+      - ${TAILSCALE_STACK_STATE_DIR:-./config/tailscale-state}:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+  jellyfin:
+    network_mode: service:tailscale
+    networks: !reset []
+    ports: !reset []
+    depends_on:
+      - tailscale
+
+  radarr:
+    network_mode: service:tailscale
+    networks: !reset []
+    ports: !reset []
+    depends_on:
+      - tailscale
+
+  sonarr:
+    network_mode: service:tailscale
+    networks: !reset []
+    ports: !reset []
+    depends_on:
+      - tailscale
+
+  prowlarr:
+    network_mode: service:tailscale
+    networks: !reset []
+    ports: !reset []
+    depends_on:
+      - tailscale
+
+  sabnzbd:
+    network_mode: service:tailscale
+    networks: !reset []
+    ports: !reset []
+    depends_on:
+      - tailscale
+
+  nzbdav:
+    network_mode: service:tailscale
+    networks: !reset []
+    ports: !reset []
+    depends_on:
+      - tailscale
+
+  seerr:
+    network_mode: service:tailscale
+    networks: !reset []
+    ports: !reset []
+    depends_on:
+      - tailscale

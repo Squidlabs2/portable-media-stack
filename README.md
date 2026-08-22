@@ -7,7 +7,7 @@ Goals:
 - GitHub as the source of truth
 - one-line bootstrap support
 - machine-specific config kept local in `.env`
-- Cloudflare Tunnel public ingress with required Tailscale remote administration
+- Host Tailscale administration plus a separate stack Tailscale identity with optional Seerr-only Funnel ingress
 - optional bundled Traefik for self-contained installs on hosts that can receive 80/443
 
 ## Quick start

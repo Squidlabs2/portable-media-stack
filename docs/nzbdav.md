@@ -15,7 +15,7 @@ TARGET_NZBDAV_COMPLETED_DOWNLOADS_DIR=/downloads/nzbdav-completed
 NZBDAV_COMPLETED_CATEGORIES=movies,tv,audio,software
 ```
 
-NZBDAV should stay private unless explicitly exposed. In the tested Funnel setup, only Radarr and Sonarr are exposed through public paths; NZBDAV is not routed through Funnel/Traefik.
+NZBDAV stays private. In the recommended Funnel setup, only Seerr is publicly routed at the root HTTPS URL; Radarr, Sonarr, Jellyfin, Prowlarr, and NZBDAV are not public.
 
 ## Volumes and paths
 

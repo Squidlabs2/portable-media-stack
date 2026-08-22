@@ -421,6 +421,9 @@ if [ "$MODE_VALUE" = "cloudflare-tunnel" ]; then
   prompt_value CLOUDFLARE_TUNNEL_TOKEN_FILE "Cloudflare Tunnel token file path"
   prompt_value CLOUDFLARE_TUNNEL_TOKEN "Cloudflare Tunnel token to write locally if the token file does not exist (leave blank to skip)"
 elif [ "$MODE_VALUE" = "tailscale-funnel" ]; then
+  echo "Host Tailscale remains the SSH/admin path. Enter a separate reusable auth key for the dedicated media-stack Tailscale identity."
+  prompt_value TAILSCALE_STACK_AUTHKEY "Reusable Tailscale auth key for the media stack"
+  prompt_value TAILSCALE_STACK_HOSTNAME "Dedicated media-stack Tailscale hostname"
   if [ "$SETUP_PRESET" = funnel ]; then
     echo "Funnel preset: Seerr only at the root of the public HTTPS 443 URL. Radarr, Sonarr, Jellyfin, NZBDAV, and administration remain private. Use ./squid-media configure later to customize this."
   else

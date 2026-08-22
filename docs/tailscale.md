@@ -1,41 +1,27 @@
 # Tailscale Notes
 
-This stack assumes Tailscale runs on the host, not inside Docker.
+This stack always requires host Tailscale for SSH and host administration. In the recommended `tailscale-funnel` mode, it also runs a separate Tailscale container for the media stack.
 
-Why:
-- simpler operational model
-- easier host access to published app ports
-- avoids mixing overlay routing into the application stack
+The dedicated container has its own persisted identity and shares its network namespace with the media services. This keeps application ports off the host while preserving host-level SSH administration.
 
 Supported access patterns:
 - `tailnet-only`: apps are reachable only from devices on your tailnet
-- `tailscale-funnel`: selected apps are still hosted on the tailnet machine but are published publicly through Tailscale Funnel without router port forwarding
+- `tailscale-funnel`: private services use the dedicated stack identity; Funnel publishes only Seerr at the root URL without router port forwarding
 
 Notes for Funnel mode:
-- the host still stays on Tailscale
-- SSH remains host-level and unchanged
+- the host stays on Tailscale for SSH/admin
+- the stack has a separate Tailscale identity and persisted state
 - public URLs use your tailnet's `*.ts.net` naming
 - supported public Funnel ports are 443, 8443, and 10000
-- the installer can ask whether to auto-configure Funnel for Radarr, Sonarr, Jellyfin, and Seerr
-- for path-based Radarr/Sonarr/Seerr, keep bundled Traefik on the local high port and point Funnel paths at Traefik, not directly at the app containers
-- expose only the services you intend to publish; the verified NZBDAV setup keeps NZBDAV private and publishes only `/radarr`, `/sonarr`, and `/seerr`
+- the default installer preset configures Funnel only for Seerr at HTTPS 443 and `/`
+- Radarr, Sonarr, Jellyfin, Prowlarr, NZBDAV, Docker, and administration remain private
 
 Verified public URL shape:
 
 ```text
-https://<device>.<tailnet>.ts.net/radarr
-https://<device>.<tailnet>.ts.net/sonarr
-https://<device>.<tailnet>.ts.net/seerr
+https://<stack-device>.<tailnet>.ts.net/
 ```
 
-Seerr uses `/seerr` by default. Seerr does not natively support a URL base like Radarr/Sonarr, so the stack generates a small Nginx subpath proxy that rewrites Seerr's root-based links under `/seerr`. Keep Jellyfin disabled on Funnel or move it to another allowed Funnel port if you intentionally expose it too.
-
-The current test machine's working Funnel hostname was:
-
-```text
-https://ethan.wolverine-crocodile.ts.net/radarr
-https://ethan.wolverine-crocodile.ts.net/sonarr
-https://ethan.wolverine-crocodile.ts.net/seerr
-```
+Seerr must use `/`, not `/seerr`, because its Next.js assets and redirects are not reliable behind a subpath proxy.
 
 If Funnel status shows multiple hostnames, test the specific hostname printed as the "Available on the internet" URL after rerunning `./scripts/ingress/configure-funnel.sh`. Old names can remain visible in status but fail externally.

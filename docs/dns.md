@@ -12,10 +12,10 @@ Typical records:
 - traefik.example.com
 
 For private-only use, prefer split DNS or tailnet-resolved names.
-If you want public Radarr/Sonarr access but cannot forward 80/443 at the router, use `tailscale-funnel` instead of public Traefik DNS.
+If you want a family-facing request portal but cannot forward 80/443 at the router, use `tailscale-funnel` to expose Seerr only instead of public Traefik DNS.
 
 Important:
 - Tailscale Funnel does not use your own public custom DNS records by default
 - Funnel publishes through the tailnet's public `*.ts.net` names
-- In `tailscale-funnel` mode, the useful URLs are path-based Funnel URLs such as `https://<device>.<tailnet>.ts.net/radarr` and `https://<device>.<tailnet>.ts.net/sonarr`.
-- Do not create or expose an NZBDAV public DNS/Funnel route unless you explicitly want its UI/API public. The verified NZBDAV setup keeps it private.
+- In the recommended `tailscale-funnel` mode, the public URL is `https://<stack-device>.<tailnet>.ts.net/` for Seerr.
+- Do not create public DNS/Funnel routes for Arr applications, Jellyfin, Prowlarr, or NZBDAV; the standard setup keeps them private.

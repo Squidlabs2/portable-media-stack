@@ -29,18 +29,39 @@ while [ $# -gt 0 ]; do
 done
 
 funnel_expected_summary() {
+  local mappings=()
   if [ "${FUNNEL_USE_PATHS:-false}" = "true" ]; then
-    printf 'Expected public mapping: Radarr at %s, Sonarr at %s' \
-      "${FUNNEL_RADARR_PATH:-/radarr}" "${FUNNEL_SONARR_PATH:-/sonarr}"
+    if [ "${FUNNEL_RADARR:-false}" = "true" ]; then
+      mappings+=("Radarr at ${FUNNEL_RADARR_PATH:-/radarr}")
+    fi
+    if [ "${FUNNEL_SONARR:-false}" = "true" ]; then
+      mappings+=("Sonarr at ${FUNNEL_SONARR_PATH:-/sonarr}")
+    fi
     if [ "${FUNNEL_JELLYFIN:-false}" = "true" ]; then
-      printf ', Jellyfin on port %s' "${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}"
+      mappings+=("Jellyfin on port ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}")
     fi
     if [ "${FUNNEL_SEERR:-false}" = "true" ]; then
-      printf ', Seerr at %s' "${FUNNEL_SEERR_PATH:-/seerr}"
+      mappings+=("Seerr at ${FUNNEL_SEERR_PATH:-/}")
     fi
-    printf '\n'
   else
-    echo "Expected public mapping: Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}, Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}, Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000} if enabled, Seerr on ${FUNNEL_SEERR_PUBLIC_PORT:-10000} if enabled"
+    if [ "${FUNNEL_RADARR:-false}" = "true" ]; then
+      mappings+=("Radarr on ${FUNNEL_RADARR_PUBLIC_PORT:-443}")
+    fi
+    if [ "${FUNNEL_SONARR:-false}" = "true" ]; then
+      mappings+=("Sonarr on ${FUNNEL_SONARR_PUBLIC_PORT:-8443}")
+    fi
+    if [ "${FUNNEL_JELLYFIN:-false}" = "true" ]; then
+      mappings+=("Jellyfin on ${FUNNEL_JELLYFIN_PUBLIC_PORT:-10000}")
+    fi
+    if [ "${FUNNEL_SEERR:-false}" = "true" ]; then
+      mappings+=("Seerr on ${FUNNEL_SEERR_PUBLIC_PORT:-443}")
+    fi
+  fi
+  if [ ${#mappings[@]} -eq 0 ]; then
+    echo "Expected public mapping: none"
+  else
+    local IFS=', '
+    echo "Expected public mapping: ${mappings[*]}"
   fi
 }
 
@@ -121,7 +142,12 @@ apply_bootstrap_data_if_enabled() {
 
 print_local_urls() {
   local host
-  host="$(hostname -s)"
+  if [ "$MODE" = "tailscale-funnel" ]; then
+    host="${TAILSCALE_STACK_HOSTNAME:-portable-media-stack}"
+    echo "Private stack URLs use the dedicated stack Tailscale identity:"
+  else
+    host="$(hostname -s)"
+  fi
 
   echo "Jellyfin: http://${host}:${JELLYFIN_PORT}"
   echo "Radarr:   http://${host}:${RADARR_PORT}"
@@ -201,7 +227,7 @@ print_next_steps() {
       echo "  4) Access apps privately over Tailscale or your LAN using the local URLs above."
       ;;
     tailscale-funnel)
-      echo "  4) Verify Funnel routes: tailscale funnel status"
+      echo "  4) Verify Funnel routes: ./squid-media funnel-status"
       echo "  5) Test the public Funnel paths, then keep private/admin apps off Funnel unless you intentionally expose them."
       ;;
     cloudflare-tunnel)
@@ -278,8 +304,13 @@ prepare_generated_configs
 
 docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" up -d
 recreate_seerr_web_if_needed
-./scripts/services/configure-radarr-quality-policy.py
-./scripts/services/configure-sonarr-season-pack-policy.py
+if [ "$MODE" = "tailscale-funnel" ]; then
+  ./scripts/services/run-arr-policy-in-stack-namespace.sh configure-radarr-quality-policy.py
+  ./scripts/services/run-arr-policy-in-stack-namespace.sh configure-sonarr-season-pack-policy.py
+else
+  ./scripts/services/configure-radarr-quality-policy.py
+  ./scripts/services/configure-sonarr-season-pack-policy.py
+fi
 configure_download_clients
 configure_ingress
 apply_bootstrap_data_if_enabled
