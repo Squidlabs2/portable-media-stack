@@ -71,6 +71,7 @@ def service_entry(kind, base_url, key):
         "port": 7878 if kind == "radarr" else 8989,
         "useSsl": False,
         "baseUrl": "",
+        "apiKey": key,
         "activeProfileId": profile["id"],
         "activeProfileName": profile["name"],
         "activeDirectory": directory,
