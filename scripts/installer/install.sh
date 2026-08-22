@@ -156,6 +156,20 @@ apply_bootstrap_data_if_enabled() {
   fi
 }
 
+configure_weekly_maintenance() {
+  [ "${ENABLE_WEEKLY_MAINTENANCE:-false}" = "true" ] || return 0
+  local command=(./scripts/host/install-weekly-maintenance.sh
+    --stack-dir "$ROOT_DIR"
+    --stack-user "$(id -un)"
+    --ntfy-server "${NTFY_SERVER:?NTFY_SERVER is required when weekly maintenance is enabled}"
+    --ntfy-topic "${NTFY_TOPIC:?NTFY_TOPIC is required when weekly maintenance is enabled}")
+  if [ "$(id -u)" -eq 0 ]; then
+    "${command[@]}"
+  else
+    sudo "${command[@]}"
+  fi
+}
+
 print_local_urls() {
   local host
   if [ "$MODE" = "tailscale-funnel" ]; then
@@ -330,5 +344,6 @@ fi
 configure_download_clients
 configure_ingress
 apply_bootstrap_data_if_enabled
+configure_weekly_maintenance
 
 print_install_summary

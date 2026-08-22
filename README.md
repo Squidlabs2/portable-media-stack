@@ -219,6 +219,18 @@ BOOTSTRAP_SOURCE_PATH=~/.local/share/portable-media-stack/bootstrap-data/latest-
 
 The target needs SSH key-based access to that source host. During install it fetches the file privately over Tailscale only if the local bootstrap file is absent, then applies it. In `tailscale-funnel` mode, apply runs within the stack's dedicated Tailscale network namespace so private Arr/downloader ports remain unexposed.
 
+## Weekly maintenance
+
+New installs enable a systemd timer that runs every Sunday at 04:00 local time with up to two hours of randomized delay. It runs Debian package upgrades and `./squid-media update`, never reboots automatically, and posts a success/failure summary to the shared ntfy topic. Configure the destination locally in `.env`:
+
+```bash
+ENABLE_WEEKLY_MAINTENANCE=true
+NTFY_SERVER=https://ntfy.squidlabs.xyz
+NTFY_TOPIC=media-stacks
+```
+
+Each notification includes the host name, so all boxes can use the same topic. Inspect its next run with `systemctl list-timers portable-media-stack-weekly-maintenance.timer`.
+
 ## Files
 
 - `compose.yml` - base app stack
