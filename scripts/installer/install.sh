@@ -164,9 +164,9 @@ configure_weekly_maintenance() {
     --ntfy-server "${NTFY_SERVER:?NTFY_SERVER is required when weekly maintenance is enabled}"
     --ntfy-topic "${NTFY_TOPIC:?NTFY_TOPIC is required when weekly maintenance is enabled}")
   if [ "$(id -u)" -eq 0 ]; then
-    "${command[@]}"
+    bash "${command[@]}"
   else
-    sudo "${command[@]}"
+    sudo bash "${command[@]}"
   fi
 }
 
