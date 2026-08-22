@@ -19,13 +19,20 @@ def api_key(config_dir: Path) -> str:
     return key
 
 
-def api_get(base_url: str, key: str, endpoint: str):
+def api_request(base_url: str, key: str, endpoint: str, *, method="GET", payload=None):
+    body = json.dumps(payload).encode() if payload is not None else None
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/v3/{endpoint.lstrip('/')}",
-        headers={"X-Api-Key": key},
+        data=body,
+        method=method,
+        headers={"X-Api-Key": key, "Content-Type": "application/json"},
     )
     with urllib.request.urlopen(request, timeout=15) as response:
-        return json.load(response)
+        return json.load(response) if response.length != 0 else None
+
+
+def api_get(base_url: str, key: str, endpoint: str):
+    return api_request(base_url, key, endpoint)
 
 
 def choose_profile(profiles):
@@ -40,21 +47,24 @@ def choose_profile(profiles):
     return profiles[0]
 
 
-def choose_directory(root_folders):
-    preferred = env("SEERR_ROOT_FOLDER", "")
-    if preferred:
-        for folder in root_folders:
-            if folder.get("path") == preferred:
-                return preferred
-        raise RuntimeError(f"Requested Seerr root folder not found: {preferred}")
-    if not root_folders:
-        raise RuntimeError("No Arr root folders are available")
-    return root_folders[0]["path"]
+def ensure_directory(base_url: str, key: str, desired: str):
+    folders = api_get(base_url, key, "rootfolder") or []
+    if not any(folder.get("path") == desired for folder in folders):
+        api_request(base_url, key, "rootfolder", method="POST", payload={"path": desired})
+        folders = api_get(base_url, key, "rootfolder") or []
+    if not any(folder.get("path") == desired for folder in folders):
+        raise RuntimeError(f"Arr did not create expected root folder: {desired}")
+    return desired
 
 
 def service_entry(kind, base_url, key):
     profile = choose_profile(api_get(base_url, key, "qualityprofile"))
-    directory = choose_directory(api_get(base_url, key, "rootfolder"))
+    default_directory = "/movies" if kind == "radarr" else "/tv"
+    directory = ensure_directory(
+        base_url,
+        key,
+        env(f"SEERR_{kind.upper()}_ROOT_FOLDER", default_directory),
+    )
     common = {
         "name": "Movies" if kind == "radarr" else "Shows",
         "hostname": "127.0.0.1",
