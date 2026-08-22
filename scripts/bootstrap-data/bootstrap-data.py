@@ -409,6 +409,8 @@ def restart_sabnzbd():
 
 
 def restart_nzbdav():
+    if env("BOOTSTRAP_SKIP_DOWNLOADER_RESTART", "false").lower() == "true":
+        return
     subprocess.run(["docker", "compose", "restart", "nzbdav"], cwd=ROOT_DIR, check=True, stdout=subprocess.DEVNULL)
 
 

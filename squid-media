@@ -91,6 +91,14 @@ case "$command" in
     exec docker compose "${COMPOSE_FILES[@]}" "${PROFILES[@]}" exec -T tailscale tailscale funnel status
     ;;
   bootstrap-apply)
+    require_env
+    set -a
+    # shellcheck disable=SC1091
+    source ./.env
+    set +a
+    if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ]; then
+      exec ./scripts/bootstrap-data/apply-bootstrap-data-in-stack-namespace.sh "$@"
+    fi
     exec ./scripts/bootstrap-data/apply-bootstrap-data.sh "$@"
     ;;
   *)

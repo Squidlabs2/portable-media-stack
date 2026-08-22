@@ -137,7 +137,11 @@ apply_bootstrap_data_if_enabled() {
   [ "${AUTO_APPLY_BOOTSTRAP_DATA:-false}" = "true" ] || return 0
 
   BOOTSTRAP_INPUT="$(resolve_bootstrap_data_file)"
-  ./scripts/bootstrap-data/apply-bootstrap-data.sh --input "$BOOTSTRAP_INPUT" --timeout "${BOOTSTRAP_WAIT_SECONDS:-180}"
+  if [ "${MODE:-tailnet-only}" = "tailscale-funnel" ]; then
+    ./scripts/bootstrap-data/apply-bootstrap-data-in-stack-namespace.sh --input "$BOOTSTRAP_INPUT" --timeout "${BOOTSTRAP_WAIT_SECONDS:-180}"
+  else
+    ./scripts/bootstrap-data/apply-bootstrap-data.sh --input "$BOOTSTRAP_INPUT" --timeout "${BOOTSTRAP_WAIT_SECONDS:-180}"
+  fi
 }
 
 print_local_urls() {
