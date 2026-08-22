@@ -1,0 +1,21 @@
+[Unit]
+Description=Restricted portable media-stack management agent
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+User=__STACK_USER__
+Group=__STACK_USER__
+EnvironmentFile=/etc/portable-media-stack/management-agent.env
+ExecStart=/usr/bin/python3 __STACK_DIR__/scripts/host/media-stack-management-agent.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=__STACK_DIR__
+
+[Install]
+WantedBy=multi-user.target
